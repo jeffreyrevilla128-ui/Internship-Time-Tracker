@@ -4,7 +4,7 @@ import OJTDashboard from './components/OJTDashboard';
 
 // Must match the key internshipConfigApi.js / attendanceapi.js read from.
 const TOKEN_STORAGE_KEY = 'ojt-auth-token';
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
 
 function App() {
   // Now holds the real user object from the backend ({ id, username,

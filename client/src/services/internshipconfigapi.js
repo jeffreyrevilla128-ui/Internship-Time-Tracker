@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
 
 // Must match TOKEN_STORAGE_KEY in App.jsx.
 const TOKEN_STORAGE_KEY = 'ojt-auth-token';

@@ -16,7 +16,7 @@ import { useGoogleLogin } from '@react-oauth/google';
 const THEME_STORAGE_KEY = 'ojt-dashboard-theme';
 
 // Point this at your Express server. Adjust the port if yours differs.
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
 
 // ---------------------------------------------------------------------
 // Minimal inline icon set — keeps the page dependency-free.
