@@ -1,0 +1,799 @@
+/* src/styles/PunchCard.css */
+
+/* ================================================================= */
+/* 1. GLOBAL WRAPPERS & CONTAINER LAYOUTS                            */
+/* ================================================================= */
+.punch-card-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+/* Main Base Card Container — now purely the shift-tracking surface */
+.punch-card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+  position: relative;
+  transition: background-color var(--duration-standard) var(--ease-standard),
+              border-color var(--duration-standard) var(--ease-standard);
+}
+
+/* Standardized container for the card body */
+.punch-content-inner {
+  padding: 1.5rem;
+}
+
+/* ================================================================= */
+/* 1b. STANDALONE LIVE CLOCK CARD                                    */
+/*     Separated from .punch-card so the ticking clock reads as      */
+/*     ambient context rather than shift data.                       */
+/* ================================================================= */
+.live-clock-card {
+  background: linear-gradient(135deg, var(--color-surface), var(--color-bg));
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+  padding: 1.75rem 1rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  transition: background-color var(--duration-standard) var(--ease-standard),
+              border-color var(--duration-standard) var(--ease-standard);
+}
+
+.live-clock-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 5px;
+  background: linear-gradient(90deg, var(--color-accent), var(--color-accent-light));
+}
+
+.live-clock-card .clock-time {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: -0.025em;
+}
+
+.live-clock-card .clock-date {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  margin-top: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ================================================================= */
+/* 2. DASHBOARD BODY CONTENTS                                        */
+/* ================================================================= */
+.punch-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+@media (min-width: 480px) {
+  .punch-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+.punch-title { margin: 0; font-size: 1.25rem; font-weight: 700; color: var(--color-text); }
+.punch-subtitle { margin: 0.25rem 0 0 0; font-size: 0.875rem; color: var(--color-text-muted); }
+
+.punch-hours-badge {
+  background-color: var(--color-accent-soft);
+  border: 1px solid var(--color-accent-light);
+  color: var(--color-accent);
+  padding: 0.375rem 0.75rem;
+  border-radius: 2rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  align-self: flex-start;
+}
+
+@media (min-width: 480px) {
+  .punch-hours-badge { align-self: center; }
+}
+
+.punch-hours-count {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+.punch-summary-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Each shift (AM / PM) gets its own labeled block instead of one flat list */
+.shift-summary-block {
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  padding: 0.875rem 1rem;
+}
+
+.shift-summary-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 0.625rem;
+}
+
+/* ---------------------------------------------------------------- */
+/* Two distinct shift cards — Morning and Afternoon each get their   */
+/* own bordered card with a color-coded left edge (blue / amber,     */
+/* matching .btn-blue / .btn-amber below) so the two shifts read as  */
+/* clearly separate surfaces instead of two rows inside one shared   */
+/* block. Each card holds its own time chips AND its own action      */
+/* button, so there's no need to scan down to a separate button row. */
+/* ---------------------------------------------------------------- */
+.shift-cards-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .shift-cards-grid {
+    flex-direction: row;
+  }
+}
+
+.shift-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 0.875rem;
+  padding: 1rem;
+  transition: background-color var(--duration-standard) var(--ease-standard),
+              border-color var(--duration-standard) var(--ease-standard);
+}
+
+.shift-card-morning {
+  border-left: 3px solid var(--color-accent);
+}
+
+.shift-card-afternoon {
+  border-left: 3px solid #d97706;
+}
+
+.shift-card-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+/* ---------------------------------------------------------------- */
+/* Time In / Time Out chips — replaces the old single "In → Out"     */
+/* preview-row so a logged time and an empty slot are never visually */
+/* merged into one string.                                           */
+/* "In" borrows the shared accent tokens (recalculates automatically */
+/* in dark mode, same as the sidebar's active-nav treatment). "Out"  */
+/* is a deliberate amber accent unrelated to the brand accent color, */
+/* so it's left as a fixed value here with its dark-safe variant set */
+/* in the DARK MODE OVERRIDES section at the bottom of this file.    */
+/* ---------------------------------------------------------------- */
+.time-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.625rem;
+}
+
+.time-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  border-radius: 0.625rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid transparent;
+}
+
+.time-chip-in {
+  background-color: var(--color-accent-soft);
+  border-color: var(--color-accent-light);
+}
+
+.time-chip-out {
+  background-color: #fffbeb;
+  border-color: #fde68a;
+}
+
+.time-chip-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+
+.time-chip-value {
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.status-logged { color: var(--color-text); font-weight: 700; }
+.status-empty { color: var(--color-text-muted); font-weight: 500; }
+
+.view-center-action {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.enter-time-trigger {
+  font-size: 1rem;
+  padding: 0.875rem 2.5rem;
+  width: 100%;
+}
+
+@media (min-width: 480px) {
+  .enter-time-trigger { width: auto; min-width: 225px; }
+}
+
+/* Two direct shift-entry triggers replacing the old single "Enter Time" button */
+.shift-select-actions {
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+@media (min-width: 480px) {
+  .shift-select-actions {
+    flex-direction: row;
+  }
+}
+
+.shift-select-btn {
+  width: 100%;
+}
+
+/* "Daily Diary" trigger button, sitting below the two shift buttons */
+.diary-trigger-btn {
+  width: 100%;
+}
+
+@media (min-width: 480px) {
+  .diary-trigger-btn { width: auto; min-width: 225px; }
+}
+
+.diary-trigger-wrap {
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.diary-trigger-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+  text-align: center;
+}
+
+/* Inline replacement for the old alert() popup — sits right under the
+   Daily Diary button so the error and the fix are in the same spot. */
+.diary-guard-error {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #dc2626;
+  text-align: center;
+}
+
+.dashboard-shell[data-theme="dark"] .diary-guard-error {
+  color: #f87171; /* red-400, readable on dark surfaces */
+}
+
+/* Red pulsing glow applied to the Daily Diary button for 3 seconds
+   whenever the empty-diary guard fires, so the button itself — not just
+   the message — draws the eye to where the fix happens. The JS side
+   removes the class after 3000ms; the animation just keeps pulsing for
+   as long as the class is present. */
+.diary-btn-glow {
+  animation: diaryGuardGlow 0.75s ease-in-out infinite;
+  border-color: #dc2626;
+}
+
+@keyframes diaryGuardGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 16px 4px rgba(220, 38, 38, 0.85);
+  }
+}
+
+/* "Save Day Logs" trigger — sits above the diary button, same sizing
+   pattern as .diary-trigger-btn but on .btn-emerald (a "completion"
+   action, same semantic color already used elsewhere for finalized
+   states) rather than .btn-blue, so it visually reads as the "finish
+   the day" action rather than another routine save. */
+.save-day-logs-wrap {
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.save-day-logs-btn {
+  width: 100%;
+}
+
+@media (min-width: 480px) {
+  .save-day-logs-btn { width: auto; min-width: 260px; }
+}
+
+/* ---------------------------------------------------------------- */
+/* Quick diary-entry modal contents                                  */
+/* ---------------------------------------------------------------- */
+.diary-quick-textarea {
+  width: 100%;
+  min-height: 160px;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.625rem;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  resize: vertical;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+
+.diary-quick-textarea:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.diary-quick-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.diary-quick-word-count {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.diary-quick-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.diary-quick-actions .btn-outline,
+.diary-quick-actions .punch-btn {
+  width: auto;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.8125rem;
+}
+
+/* ================================================================= */
+/* 3. FOCUS LOCK OVERLAY & MODAL WINDOWS                             */
+/* ================================================================= */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.modal-window-card {
+  background-color: var(--color-surface);
+  border-radius: 1.25rem;
+  width: 100%;
+  max-width: 460px;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  position: relative;
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.modal-close-corner-btn {
+  position: absolute;
+  top: 0.875rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  font-size: 1.75rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  line-height: 1;
+  z-index: 10;
+}
+.modal-close-corner-btn:hover { color: var(--color-text); }
+
+.modal-inner-content {
+  padding: 2rem 1.5rem;
+}
+
+.selection-card-title { margin: 0; font-size: 1.25rem; font-weight: 700; color: var(--color-text); text-align: center;}
+.selection-card-subtitle { margin: 0.375rem 0 1.5rem 0; font-size: 0.875rem; color: var(--color-text-muted); text-align: center; }
+
+.selection-actions-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.panel-header-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.modal-panel-title { margin: 0; font-size: 1.125rem; font-weight: 700; color: var(--color-text); }
+
+.time-entry-intro {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  margin: 0 0 1.25rem 0;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------- */
+/* Time correction sections — each shows either a locked recorded    */
+/* value, a note explaining why entry is blocked, or the auto-fill /  */
+/* manual entry controls for recording a missed punch.               */
+/* ---------------------------------------------------------------- */
+.time-entry-section {
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  margin-bottom: 0.875rem;
+}
+
+.time-entry-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.625rem;
+}
+
+.time-entry-label {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.time-entry-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Semantic "recorded" confirmation — a status color, not neutral UI
+   chrome, so it stays fixed here with its dark-safe variant defined in
+   the DARK MODE OVERRIDES section below (same treatment as the
+   calendar's Present/Absent/Holiday cells). */
+.time-entry-recorded-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #059669;
+  background-color: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 999px;
+  padding: 0.125rem 0.625rem;
+}
+
+.time-entry-edit-link {
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+.time-entry-edit-link:hover { text-decoration: underline; }
+
+.time-entry-cancel-link {
+  align-self: center;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.125rem;
+}
+.time-entry-cancel-link:hover { color: var(--color-text); text-decoration: underline; }
+
+.time-entry-value-display {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  padding: 0.625rem;
+  text-align: center;
+}
+
+.time-entry-blocked-note {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+  margin: 0;
+  padding: 0.625rem;
+  text-align: center;
+}
+
+.time-entry-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.time-entry-input {
+  width: 100%;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+.time-entry-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.time-entry-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.time-entry-autofill {
+  flex: 1;
+  padding: 0.625rem 0.5rem;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.time-entry-save {
+  flex: 1;
+  padding: 0.625rem 0.5rem;
+  font-size: 0.8125rem;
+}
+
+/* Modal timestamp view now reuses the same chip pattern as the main
+   preview, so "in" vs "out" reads identically everywhere in the app. */
+.modal-time-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.625rem;
+  margin-bottom: 1.5rem;
+}
+
+.modal-time-grid .time-chip {
+  padding: 0.75rem;
+}
+
+.modal-time-grid .time-chip-value {
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+/* ================================================================= */
+/* 4. ATOMIC BUTTON STYLES & INTERACTIVE LIFECYCLES                  */
+/* ================================================================= */
+.panel-actions { display: flex; gap: 0.5rem; width: 100%; }
+.modal-vertical-actions { flex-direction: column; }
+
+.punch-btn {
+  width: 100%;
+  padding: 0.8125rem 1rem;
+  border-radius: 0.625rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* .btn-blue is the primary action color, so it follows the shared
+   accent tokens (same as the sidebar's active-nav / logo treatment)
+   and repaints automatically in dark mode. .btn-amber / .btn-emerald
+   are secondary semantic actions (correction / completion) and stay
+   fixed, with brightness tuned for dark backgrounds in the DARK MODE
+   OVERRIDES section below. */
+.btn-blue { background-color: var(--color-accent); color: #ffffff; }
+.btn-blue:hover:not(:disabled) { filter: brightness(0.9); }
+
+.btn-amber { background-color: #d97706; color: #ffffff; }
+.btn-amber:hover:not(:disabled) { background-color: #b45309; }
+
+.btn-emerald { background-color: #059669; color: #ffffff; }
+.btn-emerald:hover:not(:disabled) { background-color: #047857; }
+
+/* Diary's own accent — yellow — distinct from blue (primary/Morning),
+   amber (Afternoon), and emerald (day-completion), while sitting on the
+   same saturation/lightness family as the rest so it reads as part of
+   the same system rather than a mismatched color. Dark text is used
+   instead of white for contrast, since white-on-yellow fails accessible
+   contrast ratios. (Class kept as .btn-indigo — only the color changed —
+   so PunchCard.jsx doesn't need to be touched.) */
+.btn-indigo { background-color: #eab308; color: #422006; }
+.btn-indigo:hover:not(:disabled) { background-color: #ca8a04; }
+
+.btn-outline { background-color: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border); padding: 1rem; font-size: 0.9375rem; }
+.btn-outline:hover { background-color: var(--color-bg); border-color: var(--color-text-muted); }
+
+.punch-btn:disabled { background-color: var(--color-border); color: var(--color-text-muted); cursor: not-allowed; }
+.punch-btn:active:not(:disabled) { transform: scale(0.99); }
+
+/* Entry Physics Animation Fader */
+.view-fade-in { animation: modalItemFade 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+@keyframes modalItemFade {
+  from { opacity: 0; transform: scale(0.98) translateY(4px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Responsive: stack chips on very narrow screens */
+@media (max-width: 360px) {
+  .time-pair,
+  .modal-time-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ================================================================= */
+/* 5. SUCCESS TOAST NOTIFICATION                                     */
+/*    Ported exactly from HistoryLogs.css: same positioning,          */
+/*    animation, timing, and styling — only the message differs.     */
+/*    Semantic success color, stays fixed with a dark-safe variant    */
+/*    below (same reasoning as .time-entry-recorded-badge).           */
+/* ================================================================= */
+.toast-notification-banner {
+  position: absolute;
+  bottom: 1.5rem;
+  left: 1.5rem;
+  padding: 0.85rem 1.5rem;
+  border-radius: 0.625rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  z-index: 10;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  opacity: 1;
+  transform: scale(1.05) translateX(0);
+  transform-origin: bottom left;
+  transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+  animation: toastSlideRightContainer 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toast-success {
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #16a34a;
+  box-shadow: 0 10px 15px -3px rgba(22, 163, 74, 0.08);
+}
+
+.toast-danger {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  box-shadow: 0 10px 15px -3px rgba(220, 38, 38, 0.08);
+}
+
+@keyframes toastSlideRightContainer {
+  from {
+    opacity: 0;
+    transform: scale(1.05) translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.05) translateX(0);
+  }
+}
+
+.toast-notification-banner.fade-out-active {
+  opacity: 0;
+  transform: scale(1.05) translateX(10px);
+}
+
+@media (max-width: 768px) {
+  .toast-notification-banner {
+    left: 1rem;
+    right: 1rem;
+    bottom: 1rem;
+    transform-origin: bottom center;
+  }
+}
+
+/* ================================================================= */
+/* 6. DARK MODE OVERRIDES                                            */
+/* Everything above already follows dark mode automatically wherever  */
+/* it references a --color-* or --color-accent* token, exactly like   */
+/* Sidebar.css's structural rules — no extra scoping needed for those. */
+/* The rules below are only for the handful of colors that were       */
+/* deliberately left fixed because they carry semantic meaning (an    */
+/* amber "time out" cue, a green "recorded"/"success" confirmation)   */
+/* rather than following the neutral or accent palette. Each gets a   */
+/* dark-safe variant here, mirroring how Sidebar.css scopes            */
+/* .nav-link-active's dark treatment under                             */
+/* .dashboard-shell[data-theme="dark"].                                */
+/* ================================================================= */
+.dashboard-shell[data-theme="dark"] .time-chip-out {
+  background-color: rgb(217 119 6 / 0.16);
+  border-color: #d97706;
+}
+
+.dashboard-shell[data-theme="dark"] .shift-card-afternoon {
+  border-left-color: #f59e0b;
+}
+
+.dashboard-shell[data-theme="dark"] .time-entry-recorded-badge {
+  background-color: rgb(5 150 105 / 0.16);
+  border-color: rgb(110 231 183 / 0.35);
+  color: #6ee7b7; /* emerald-300 */
+}
+
+.dashboard-shell[data-theme="dark"] .btn-amber:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.dashboard-shell[data-theme="dark"] .btn-emerald:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.dashboard-shell[data-theme="dark"] .btn-indigo:hover:not(:disabled) {
+  filter: brightness(1.15);
+}
+
+.dashboard-shell[data-theme="dark"] .toast-success {
+  background-color: rgb(22 163 74 / 0.16);
+  border-color: rgb(74 222 128 / 0.35);
+  color: #86efac; /* green-300 */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.35);
+}
+
+.dashboard-shell[data-theme="dark"] .toast-danger {
+  background-color: rgb(220 38 38 / 0.16);
+  border-color: rgb(248 113 113 / 0.35);
+  color: #fca5a5; /* red-300 */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.35);
+}

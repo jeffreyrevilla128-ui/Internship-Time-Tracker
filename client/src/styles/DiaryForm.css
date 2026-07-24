@@ -1,0 +1,696 @@
+/* src/styles/DiaryForm.css */
+/* Token values (colors, radii, shadows, spacing) are kept identical to
+   PunchCard.css so the two cards read as one consistent system, even
+   though they're styled independently. Toast and modal patterns below
+   are shared verbatim with HistoryLogs.css for a uniform interaction
+   language across the app.
+
+   DARK MODE: neutral/structural colors below are written directly with
+   the shared --color-* / --color-accent* tokens (same approach as
+   Sidebar.css and PunchCard.css), so they repaint automatically when
+   .dashboard-shell's data-theme flips — no extra scoping needed for
+   those. Colors that carry semantic meaning (danger red, success green)
+   stay fixed here and get explicit dark-safe variants in the DARK MODE
+   OVERRIDES section at the very bottom of this file. */
+
+/* ================================================================= */
+/* 1. CARD SHELL                                                     */
+/* ================================================================= */
+.diary-card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+  padding: 1.5rem;
+  width: 100%;
+  position: relative;
+  transition: background-color var(--duration-standard) var(--ease-standard),
+              border-color var(--duration-standard) var(--ease-standard);
+}
+
+.diary-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+@media (min-width: 480px) {
+  .diary-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+.diary-title { margin: 0; font-size: 1.25rem; font-weight: 700; color: var(--color-text); }
+.diary-subtitle { margin: 0.25rem 0 0 0; font-size: 0.875rem; color: var(--color-text-muted); }
+
+.diary-count-badge {
+  background-color: var(--color-accent-soft);
+  border: 1px solid var(--color-accent-light);
+  color: var(--color-accent);
+  padding: 0.375rem 0.75rem;
+  border-radius: 2rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  align-self: flex-start;
+  white-space: nowrap;
+}
+
+@media (min-width: 480px) {
+  .diary-count-badge { align-self: center; }
+}
+
+.diary-count-number {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+/* ================================================================= */
+/* 2. EMPTY STATE — shown when there are no diary entries at all;    */
+/*    disappears automatically once at least one entry exists.       */
+/* ================================================================= */
+.diary-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  text-align: center;
+  background-color: var(--color-bg);
+  border: 1px dashed var(--color-border);
+  border-radius: 0.75rem;
+  padding: 2rem 1rem;
+  margin: 0;
+}
+
+.diary-empty-state-icon {
+  font-size: 1.75rem;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+.diary-empty-state-text {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+/* ================================================================= */
+/* 3. ENTRY PANEL (mirrors .time-entry-section)                      */
+/* ================================================================= */
+.diary-entry-panel {
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.diary-textarea {
+  width: 100%;
+  min-height: 160px;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.625rem;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  resize: vertical;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+
+.diary-textarea:disabled {
+  background-color: var(--color-border);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+.diary-textarea:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.diary-panel-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.diary-word-count {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Semantic warning color (over word-limit) — stays fixed, dark-safe
+   variant defined in the DARK MODE OVERRIDES section below. */
+.diary-word-count-limit {
+  color: #dc2626;
+}
+
+.diary-panel-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* ================================================================= */
+/* 4. BUTTONS (mirrors .punch-btn / .btn-blue / .btn-outline)        */
+/* ================================================================= */
+.diary-btn {
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.625rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.diary-btn-primary { background-color: var(--color-accent); color: #ffffff; }
+.diary-btn-primary:hover:not(:disabled) { filter: brightness(0.9); }
+.diary-btn-primary:disabled { background-color: var(--color-border); color: var(--color-text-muted); cursor: not-allowed; }
+
+.diary-btn-outline { background-color: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border); }
+.diary-btn-outline:hover { background-color: var(--color-bg); border-color: var(--color-text-muted); }
+
+.diary-btn:active:not(:disabled) { transform: scale(0.99); }
+
+.diary-add-button {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  font-size: 0.875rem;
+}
+
+/* ================================================================= */
+/* 5. ENTRIES LIST — modern card style, matching PunchCard's           */
+/*    .shift-card (Morning/Afternoon Shift) treatment: rounded corners,*/
+/*    a colored left edge, generous padding, and a light hover lift.   */
+/*    Sort order (newest first) is handled in DiaryForm.jsx's          */
+/*    `sortedEntries` — this section is purely visual.                 */
+/* ================================================================= */
+.diary-entries-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.diary-entries-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: -0.125rem;
+}
+
+.diary-entry-item {
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-border);
+  border-radius: 0.875rem;
+  padding: 1rem 1.125rem;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+  transition: background-color var(--duration-standard) var(--ease-standard),
+              border-color var(--duration-standard) var(--ease-standard),
+              box-shadow var(--duration-standard) var(--ease-standard),
+              transform var(--duration-standard) var(--ease-standard);
+}
+
+.diary-entry-item:hover {
+  box-shadow: 0 6px 14px -4px rgb(0 0 0 / 0.1);
+  transform: translateY(-1px);
+}
+
+/* Highlights the entry matching the currently active shiftState date —
+   same accent-soft fill as before, now paired with an accent-colored
+   left edge so it reads as a "current" card the same way .shift-card's
+   colored edge distinguishes Morning from Afternoon. */
+.diary-entry-item-active {
+  background-color: var(--color-accent-soft);
+  border-color: var(--color-accent-light);
+  border-left-color: var(--color-accent);
+}
+
+.diary-entry-active-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  background-color: var(--color-accent-soft);
+  border-radius: 999px;
+  padding: 0.0625rem 0.5rem;
+  vertical-align: middle;
+}
+
+.diary-entry-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.625rem;
+}
+
+.diary-entry-meta-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.diary-entry-time {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+/* Delete icon button — always visibly a destructive action (light red
+   fill + red icon at rest, matching the .btn-delete tone used in
+   HistoryLogs) rather than a faint text glyph, so it reads clearly at
+   a glance and gives the pointer a comfortable-sized target to hit.
+   Semantic danger color — stays fixed, dark-safe variant below. */
+.diary-entry-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  background-color: #fef2f2;
+  border: 1px solid #fee2e2;
+  border-radius: 9999px;
+  cursor: pointer;
+  padding: 0;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.diary-entry-delete-icon {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #dc2626;
+  line-height: 1;
+}
+
+.diary-entry-delete-btn:hover {
+  background-color: #fee2e2;
+  border-color: #fecaca;
+  transform: scale(1.06);
+}
+
+.diary-entry-delete-btn:active {
+  transform: scale(0.95);
+}
+
+.diary-entry-delete-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.25);
+}
+
+.diary-entry-text-empty {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+/* ================================================================= */
+/* 5a. FIXED-HEIGHT CARD PREVIEW (View button + line-clamped text)   */
+/* Mirrors the "diary-inline-container / row-truncated-text /        */
+/* diary-view-trigger-btn" pattern used in HistoryLogs.css so both   */
+/* components truncate long text the same way.                      */
+/* ================================================================= */
+.diary-inline-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-start;
+  width: 100%;
+}
+
+/* Scoped to the diary card so this clamps to a fixed number of lines
+   instead of the single-line nowrap truncation HistoryLogs uses for
+   its narrower table cell — the card has room for a short preview. */
+.diary-entry-item .row-truncated-text {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 0.875rem;
+  line-height: 1.55;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+}
+
+.diary-view-trigger-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  transition: filter 0.1s ease;
+}
+.diary-view-trigger-btn:hover { filter: brightness(0.85); text-decoration: underline; }
+
+/* ================================================================= */
+/* 5b. SHIFT STATUS BADGE (Whole Day / Half Day / No Punch Data)     */
+/* Reuses the app's established semantic palette rather than          */
+/* introducing new colors: green matches .diary-validation-box's      */
+/* "complete" tone, amber matches MetricHeader's "partial/attention"   */
+/* tone, and the neutral fallback tracks --color-* tokens so it's      */
+/* dark-safe automatically without a separate override below.         */
+/* ================================================================= */
+.diary-shift-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.625rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.diary-shift-status-whole {
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #16a34a;
+}
+
+.diary-shift-status-half {
+  background-color: rgb(255 251 235 / 0.6);
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
+
+.diary-shift-status-none {
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+/* ================================================================= */
+/* 6. VALIDATION BANNER (mirrors .toast-success palette)             */
+/* Semantic success color — stays fixed, dark-safe variant below.    */
+/* ================================================================= */
+.diary-validation-box {
+  margin-top: 1rem;
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #16a34a;
+  border-radius: 0.75rem;
+  padding: 0.875rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* ================================================================= */
+/* 7. TOAST NOTIFICATIONS (identical pattern to HistoryLogs.css so   */
+/*    success/delete feedback looks and behaves the same app-wide)   */
+/*    Semantic colors — stay fixed, dark-safe variants below.        */
+/* ================================================================= */
+.toast-notification-banner {
+  position: absolute;
+  bottom: 1.5rem;
+  left: 1.5rem;
+  padding: 0.85rem 1.5rem;
+  border-radius: 0.625rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  z-index: 10;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  opacity: 1;
+  transform: scale(1.05) translateX(0);
+  transform-origin: bottom left;
+  transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+  animation: toastSlideRightContainer 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toast-success {
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #16a34a;
+  box-shadow: 0 10px 15px -3px rgba(22, 163, 74, 0.08);
+}
+
+.toast-danger {
+  background-color: #fef2f2;
+  border: 1px solid #fee2e2;
+  color: #dc2626;
+  box-shadow: 0 10px 15px -3px rgba(220, 38, 38, 0.08);
+}
+
+@keyframes toastSlideRightContainer {
+  from {
+    opacity: 0;
+    transform: scale(1.05) translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.05) translateX(0);
+  }
+}
+
+.toast-notification-banner.fade-out-active {
+  opacity: 0;
+  transform: scale(1.05) translateX(10px);
+}
+
+@media (max-width: 768px) {
+  .toast-notification-banner {
+    left: 1rem;
+    right: 1rem;
+    bottom: 1rem;
+    transform-origin: bottom center;
+  }
+}
+
+/* ================================================================= */
+/* 8. MODAL SHELL (identical structure/classes to HistoryLogs.css so */
+/*    the diary's view/edit/delete dialogs match the app's other     */
+/*    modals exactly)                                                */
+/* ================================================================= */
+.diary-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1.5rem;
+}
+
+.diary-modal-card {
+  background-color: var(--color-surface);
+  width: 100%;
+  max-width: 540px;
+  max-height: 85vh;
+  border-radius: 1rem;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: diaryModalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes diaryModalFadeIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.modal-card-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background-color: var(--color-bg);
+  flex-shrink: 0;
+}
+
+.modal-card-title { margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--color-text); }
+.modal-card-subtitle { margin: 0.25rem 0 0 0; font-size: 0.75rem; color: var(--color-text-muted); font-weight: 600; }
+
+.modal-close-x-btn {
+  background: transparent; border: none; font-size: 1rem; color: var(--color-text-muted);
+  cursor: pointer; padding: 0.25rem; border-radius: 0.375rem;
+}
+.modal-close-x-btn:hover { color: var(--color-text); background-color: var(--color-border); }
+
+.modal-card-body { padding: 1.5rem; overflow-x: hidden; }
+.max-height-view { max-height: 320px; overflow-y: auto; }
+.modal-form-scrollable { max-height: 480px; overflow-y: auto; }
+.modal-diary-fulltext {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--color-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.modal-card-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--color-bg);
+  flex-shrink: 0;
+}
+
+.modal-cancel-inline-btn { background-color: var(--color-surface); color: var(--color-text-muted); border: 1px solid var(--color-border); padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.75rem; font-weight: 700; cursor: pointer; }
+.modal-cancel-inline-btn:hover { background-color: var(--color-bg); color: var(--color-text); }
+
+/* .modal-close-action-btn is a fixed "ink" swatch rather than a token
+   reference on purpose — it's a neutral high-contrast close action that
+   needs to stay visually distinct from .modal-save-action-btn's accent
+   fill in both themes. Its dark-mode variant is set explicitly below
+   instead of following --color-text, since --color-text is a light
+   color in dark mode and would make the button vanish into the modal. */
+.modal-close-action-btn, .modal-save-action-btn {
+  background-color: #0f172a; color: #ffffff; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem;
+  font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+.modal-close-action-btn:hover { background-color: #1e293b; }
+.modal-save-action-btn { background-color: var(--color-accent); }
+.modal-save-action-btn:hover:not(:disabled) { filter: brightness(0.9); }
+.modal-save-action-btn:disabled { background-color: var(--color-border); color: var(--color-text-muted); cursor: not-allowed; opacity: 0.7; }
+
+/* ================================================================= */
+/* 9. DELETE CONFIRMATION MODAL VARIANT                              */
+/* Semantic danger colors — stay fixed, dark-safe variants below.    */
+/* ================================================================= */
+.confirm-delete-modal { max-width: 440px; }
+.delete-header { background-color: #fef2f2; border-bottom: 1px solid #fee2e2; }
+.text-danger { color: #991b1b !important; }
+.close-x-danger:hover { color: #991b1b; background-color: #fee2e2; }
+.text-center-padding { padding: 2rem 1.5rem; text-align: center; }
+.delete-alert-icon { font-size: 2.25rem; margin-bottom: 0.75rem; }
+.delete-warning-text { margin: 0; font-size: 0.875rem; line-height: 1.5; color: var(--color-text-muted); }
+.delete-footer { background-color: var(--color-bg); border-top: 1px solid var(--color-border); }
+
+.modal-confirm-delete-btn {
+  background-color: #dc2626; color: #ffffff; border: none;
+  padding: 0.5rem 1.25rem; border-radius: 0.5rem; font-size: 0.75rem;
+  font-weight: 700; cursor: pointer; transition: background-color 0.15s ease;
+}
+.modal-confirm-delete-btn:hover { background-color: #b91c1c; }
+
+/* ================================================================= */
+/* 10. DARK MODE OVERRIDES                                           */
+/* Everything above already follows dark mode automatically wherever  */
+/* it references a --color-* or --color-accent* token, exactly like   */
+/* Sidebar.css and PunchCard.css — no extra scoping needed for those. */
+/* The rules below cover only the colors deliberately left fixed      */
+/* because they carry semantic meaning (danger red, success green)    */
+/* rather than following the neutral or accent palette, plus the      */
+/* fixed-ink .modal-close-action-btn which intentionally doesn't      */
+/* track --color-text (see the comment on it above).                  */
+/* ================================================================= */
+.dashboard-shell[data-theme="dark"] .diary-entry-item {
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+}
+
+.dashboard-shell[data-theme="dark"] .diary-entry-item:hover {
+  box-shadow: 0 6px 14px -4px rgb(0 0 0 / 0.45);
+}
+
+.dashboard-shell[data-theme="dark"] .diary-word-count-limit {
+  color: #fca5a5; /* red-300 */
+}
+
+.dashboard-shell[data-theme="dark"] .diary-entry-delete-btn {
+  background-color: rgb(220 38 38 / 0.16);
+  border-color: rgb(248 113 113 / 0.35);
+}
+
+.dashboard-shell[data-theme="dark"] .diary-entry-delete-btn:hover {
+  background-color: rgb(220 38 38 / 0.26);
+  border-color: rgb(248 113 113 / 0.5);
+}
+
+.dashboard-shell[data-theme="dark"] .diary-entry-delete-icon {
+  color: #fca5a5; /* red-300 */
+}
+
+.dashboard-shell[data-theme="dark"] .diary-validation-box {
+  background-color: rgb(22 163 74 / 0.16);
+  border-color: rgb(74 222 128 / 0.35);
+  color: #86efac; /* green-300 */
+}
+
+.dashboard-shell[data-theme="dark"] .diary-shift-status-whole {
+  background-color: rgb(22 163 74 / 0.16);
+  border-color: rgb(74 222 128 / 0.35);
+  color: #86efac; /* green-300 */
+}
+
+.dashboard-shell[data-theme="dark"] .diary-shift-status-half {
+  background-color: rgb(217 119 6 / 0.16);
+  border-color: rgb(245 158 11 / 0.35);
+  color: #fbbf24; /* amber-400 */
+}
+
+.dashboard-shell[data-theme="dark"] .toast-success {
+  background-color: rgb(22 163 74 / 0.16);
+  border-color: rgb(74 222 128 / 0.35);
+  color: #86efac; /* green-300 */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.35);
+}
+
+.dashboard-shell[data-theme="dark"] .toast-danger {
+  background-color: rgb(220 38 38 / 0.16);
+  border-color: rgb(248 113 113 / 0.35);
+  color: #fca5a5; /* red-300 */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.35);
+}
+
+.dashboard-shell[data-theme="dark"] .modal-close-action-btn {
+  background-color: #475569; /* slate-600 — stays legible against a dark card, unlike near-black */
+}
+
+.dashboard-shell[data-theme="dark"] .modal-close-action-btn:hover {
+  background-color: #334155; /* slate-700 */
+}
+
+.dashboard-shell[data-theme="dark"] .delete-header {
+  background-color: rgb(220 38 38 / 0.14);
+  border-bottom-color: rgb(248 113 113 / 0.3);
+}
+
+.dashboard-shell[data-theme="dark"] .text-danger {
+  color: #fca5a5 !important; /* red-300 */
+}
+
+.dashboard-shell[data-theme="dark"] .close-x-danger:hover {
+  color: #fca5a5;
+  background-color: rgb(220 38 38 / 0.22);
+}
+
+.dashboard-shell[data-theme="dark"] .modal-confirm-delete-btn {
+  background-color: #ef4444; /* red-500 — brighter, reads better on a dark surface */
+}
+
+.dashboard-shell[data-theme="dark"] .modal-confirm-delete-btn:hover {
+  background-color: #dc2626; /* red-600 */
+}

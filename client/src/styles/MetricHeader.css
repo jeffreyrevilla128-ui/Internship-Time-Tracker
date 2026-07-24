@@ -1,0 +1,556 @@
+/* src/styles/MetricHeader.css */
+
+/* Main Card Wrapper */
+.metric-card {
+  background-color: var(--color-surface);
+  padding: 3.5rem 1.5rem 1.5rem;
+  border-radius: 1rem;
+  border: 1.5px solid var(--color-border);
+  box-shadow: var(--shadow-card);
+  position: relative;
+  transition: background-color var(--duration-standard) var(--ease-standard),
+              border-color var(--duration-standard) var(--ease-standard),
+              box-shadow var(--duration-standard) var(--ease-standard);
+}
+
+/* Row alignment logic */
+.metric-layout-row {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+}
+
+/* Text Element Rules */
+.metric-main-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.015em;
+}
+
+.metric-subtitle {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+/* Badge Flex Matrix Wrapper */
+.metric-badge-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-size: 0.875rem;
+  width: 100%;
+}
+
+/* General Metric Badge Base Blueprint */
+.metric-badge {
+  flex: 1 1 0%;
+  padding: 1rem 1.25rem;
+  border-radius: 0.875rem;
+  min-width: 120px;
+  transition: all var(--duration-standard) var(--ease-standard);
+  backdrop-filter: blur(8px);
+}
+
+/* Individual Badge Color Configurations */
+.metric-badge-slate {
+  background-color: var(--color-bg);
+  border: 1.5px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.metric-badge-emerald {
+  background: linear-gradient(135deg, rgb(16 185 129 / 0.08), rgb(34 211 238 / 0.08));
+  border: 1.5px solid rgb(16 185 129 / 0.3);
+}
+
+.metric-badge-amber {
+  background: linear-gradient(135deg, rgb(245 158 11 / 0.08), rgb(251 146 60 / 0.08));
+  border: 1.5px solid rgb(245 158 11 / 0.3);
+}
+
+.metric-badge-indigo {
+  background: linear-gradient(135deg, var(--color-accent-soft), rgb(6 182 212 / 0.05));
+  border: 1.5px solid var(--color-accent);
+  cursor: help;
+}
+
+/* Header Element inside Badges */
+.metric-badge-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.375rem;
+  color: var(--color-text-muted);
+}
+
+.label-slate { color: var(--color-text-muted); }
+.label-emerald { color: #10b981; }
+.label-amber { color: #f97316; }
+.label-indigo {
+  color: var(--color-accent);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 700;
+}
+
+.metric-value-slate {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--color-text);
+  display: block;
+  letter-spacing: -0.01em;
+}
+
+.metric-value-emerald {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #10b981;
+  display: block;
+  letter-spacing: -0.01em;
+}
+
+.metric-value-amber {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #f97316;
+  display: block;
+  letter-spacing: -0.01em;
+}
+
+.metric-value-indigo {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--color-accent);
+  display: block;
+  letter-spacing: -0.01em;
+}
+
+.metric-forecast-spinner {
+  font-size: 10px;
+  display: inline-block;
+}
+
+/* Configuration Trigger Button — pinned to the metric card's top-right
+   corner, independent of the title/badge layout below it. */
+.metric-config-button {
+  position: absolute;
+  top: 1rem;
+  right: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--duration-standard) var(--ease-standard);
+}
+
+.metric-config-button:hover {
+  background-color: var(--color-accent-soft);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.metric-config-icon {
+  font-size: 0.9rem;
+}
+
+/* Meta row: start date / working days left */
+.metric-meta-row {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.metric-meta-row strong {
+  color: #334155;
+}
+
+/* Progress Section Structural Tree */
+.progress-section {
+  width: 100%;
+}
+
+.progress-text-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  margin-bottom: 0.75rem;
+}
+
+.progress-percent-count {
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 800;
+}
+
+.progress-track-wrapper {
+  width: 100%;
+  background-color: var(--color-bg);
+  height: 0.75rem;
+  border-radius: 9999px;
+  overflow: hidden;
+  border: 1.5px solid var(--color-border);
+}
+
+.progress-bar-fill {
+  background: linear-gradient(90deg, var(--color-accent), var(--color-accent-light));
+  height: 100%;
+  border-radius: 9999px;
+  transition: width var(--duration-standard) var(--ease-standard);
+  box-shadow: 0 2px 8px -2px rgb(8 145 178 / 0.3);
+}
+
+/* ================================================================= */
+/* SETUP STEP INDICATOR — shown until both Required Hours and Start   */
+/* Date are configured. Uses accent color for visual consistency.     */
+/* ================================================================= */
+.metric-setup-banner {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.875rem 1.25rem;
+  margin-top: 1rem;
+  border-radius: 0.75rem;
+  border: 1.5px solid rgb(245 158 11 / 0.4);
+  background: linear-gradient(135deg, rgb(255 251 235 / 0.8), rgb(254 243 199 / 0.6));
+  color: #b45309;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.metric-setup-banner-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.metric-setup-banner-cta {
+  margin-left: auto;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  border: 1.5px solid #f97316;
+  background: linear-gradient(135deg, #f97316, #fb923c);
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--duration-standard) var(--ease-standard);
+}
+
+.metric-setup-banner-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px -2px rgb(249 115 22 / 0.3);
+}
+
+/* Smaller variant used inside the configuration modal itself */
+.metric-modal-setup-banner {
+  display: flex;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid #fde68a;
+  background-color: rgb(255 251 235 / 0.6);
+  color: #92400e;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Amber warning border on whichever modal input is still incomplete —
+   distinct from .auth-input-error's red, since this isn't a validation
+   error yet, just an unfinished required step. */
+.modal-input-warning {
+  border-color: #f59e0b !important; /* amber-500 */
+}
+
+.modal-input-warning:focus {
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 0 3px rgb(245 158 11 / 0.15) !important;
+}
+
+/* ================================================================= */
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgb(15 23 42 / 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 50;
+  backdrop-filter: blur(4px);
+}
+
+/* Modal Card */
+.modal-card {
+  background-color: var(--color-surface);
+  border-radius: 1rem;
+  width: 100%;
+  max-width: 26rem;
+  box-shadow: var(--shadow-hover);
+  overflow: hidden;
+  border: 1.5px solid var(--color-border);
+  transition: all var(--duration-standard) var(--ease-standard);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 1.75rem;
+  border-bottom: 1.5px solid var(--color-border);
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  transition: color var(--duration-standard) var(--ease-standard);
+}
+
+.modal-close-btn:hover {
+  color: var(--color-text);
+}
+
+.modal-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.modal-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.modal-input {
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  border: 1.5px solid var(--color-border);
+  border-radius: 0.625rem;
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  outline: none;
+  transition: all var(--duration-standard) var(--ease-standard);
+}
+
+.modal-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1.25rem 1.75rem;
+  border-top: 1.5px solid var(--color-border);
+  background-color: var(--color-bg);
+}
+
+.modal-btn {
+  padding: 0.625rem 1.25rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  border-radius: 0.625rem;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: all var(--duration-standard) var(--ease-standard);
+}
+
+.modal-btn-secondary {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.modal-btn-secondary:hover {
+  background-color: var(--color-bg);
+  border-color: var(--color-accent);
+}
+
+.modal-btn-primary {
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-light));
+  color: #ffffff;
+  border-color: transparent;
+}
+
+.modal-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px -2px rgb(8 145 178 / 0.3);
+}
+
+/* Desktop Media Query Adjustments */
+@media (min-width: 648px) {
+  .metric-layout-row {
+    flex-direction: row;
+    align-items: center;
+  }
+  
+  .metric-badge-container {
+    width: auto;
+  }
+  
+  .metric-badge {
+    flex: none;
+  }
+}
+
+/* ================================================================= */
+/* DARK MODE SUPPORT (inherits theme tokens from .dashboard-shell)    */
+/* ================================================================= */
+
+.metric-card{
+  background-color:var(--color-surface);
+  border-color:var(--color-border);
+  color:var(--color-text);
+  transition:background-color var(--duration-standard) var(--ease-standard),
+             border-color var(--duration-standard) var(--ease-standard),
+             color var(--duration-standard) var(--ease-standard);
+}
+
+.metric-main-title{color:var(--color-text);}
+.metric-subtitle,
+.metric-meta-row,
+.progress-text-row{color:var(--color-text-muted);}
+.metric-meta-row strong{color:var(--color-text);}
+
+.metric-config-button{
+  background:var(--color-surface);
+  color:var(--color-text);
+  border-color:var(--color-border);
+}
+.metric-config-button:hover{
+  background:var(--color-accent-soft);
+  border-color:var(--color-accent);
+}
+
+.progress-track-wrapper{
+  background:var(--color-bg);
+  border-color:var(--color-border);
+}
+
+.modal-input{
+  background:var(--color-bg);
+  color:var(--color-text);
+  border-color:var(--color-border);
+}
+
+.modal-card{
+  background:var(--color-surface);
+  color:var(--color-text);
+}
+
+.modal-header,
+.modal-footer{
+  border-color:var(--color-border);
+}
+
+.modal-footer{
+  background:var(--color-bg);
+}
+
+.modal-title,
+.modal-label{
+  color:var(--color-text);
+}
+
+.modal-btn-secondary{
+  background:var(--color-surface);
+  color:var(--color-text);
+  border-color:var(--color-border);
+}
+
+.dashboard-shell[data-theme="dark"] .metric-badge-slate{
+  background:#1e293b;
+  border-color:#334155;
+}
+.dashboard-shell[data-theme="dark"] .metric-badge-emerald{
+  background:rgba(5,150,105,.16);
+  border-color:rgba(16,185,129,.35);
+}
+.dashboard-shell[data-theme="dark"] .metric-badge-amber{
+  background:rgba(217,119,6,.16);
+  border-color:rgba(245,158,11,.35);
+}
+.dashboard-shell[data-theme="dark"] .metric-badge-indigo{
+  background:rgba(79,70,229,.16);
+  border-color:rgba(99,102,241,.35);
+}
+
+.dashboard-shell[data-theme="dark"] .metric-setup-banner,
+.dashboard-shell[data-theme="dark"] .metric-modal-setup-banner{
+  background:rgba(217,119,6,.16);
+  border-color:rgba(245,158,11,.35);
+  color:#fbbf24;
+}
+.dashboard-shell[data-theme="dark"] .metric-setup-banner-cta{
+  background:#f59e0b;
+  border-color:#f59e0b;
+  color:#1e293b;
+}
+.dashboard-shell[data-theme="dark"] .metric-setup-banner-cta:hover{
+  background:#fbbf24;
+}
+.dashboard-shell[data-theme="dark"] .metric-value-slate{
+  color:#cbd5e1;
+}
+.dashboard-shell[data-theme="dark"] .modal-input-warning{
+  border-color:#f59e0b !important;
+}
+
+.dashboard-shell[data-theme="dark"] .label-slate{color:#cbd5e1;}
+.dashboard-shell[data-theme="dark"] .label-emerald,
+.dashboard-shell[data-theme="dark"] .metric-value-emerald{color:#34d399;}
+.dashboard-shell[data-theme="dark"] .label-amber,
+.dashboard-shell[data-theme="dark"] .metric-value-amber{color:#fbbf24;}
+.dashboard-shell[data-theme="dark"] .label-indigo,
+.dashboard-shell[data-theme="dark"] .metric-value-indigo{color:#a5b4fc;}

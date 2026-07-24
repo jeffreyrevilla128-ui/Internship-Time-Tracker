@@ -1,0 +1,491 @@
+/* src/styles/OJTDashboard.css */
+
+/* ================================================================= */
+/* 0. DESIGN TOKENS                                                  */
+/* ================================================================= */
+.dashboard-shell {
+  --color-bg: #f8f9fa;
+  --color-surface: #ffffff;
+  --color-border: #e8eef7;
+  --color-text: #0f172a;
+  --color-text-muted: #64748b;
+
+  --color-accent: #0891b2;
+  --color-accent-light: #06b6d4;
+  --color-accent-soft: #ecf9ff;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+
+  --shadow-ambient: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  --shadow-contact: 0 1px 3px 0 rgb(0 0 0 / 0.06);
+  --shadow-topbar: var(--shadow-ambient), var(--shadow-contact);
+  --shadow-card: 0 20px 40px -12px rgb(15 23 42 / 0.08), 0 8px 16px -8px rgb(15 23 42 / 0.04);
+  --shadow-hover: 0 24px 48px -12px rgb(15 23 42 / 0.15);
+
+  --space-xs: 0.5rem;
+  --space-sm: 1rem;
+  --space-md: 1.5rem;
+  --space-lg: 2rem;
+
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 0.15s;
+  --duration-standard: 0.25s;
+
+  --topbar-height: 64px;
+  --sidebar-width: 260px;
+  --content-max-width: 1400px;
+}
+
+/* ================================================================= */
+/* 0b. DARK MODE TOKEN OVERRIDES                                     */
+/* Toggling data-theme on .dashboard-shell recalculates every custom  */
+/* property below it, so anything referencing var(--color-*) — the   */
+/* topbar, main content background, borders, text — updates instantly*/
+/* with no per-component logic needed. --shadow-topbar isn't redefined*/
+/* here because it composes var(--shadow-ambient)/var(--shadow-contact)*/
+/* lazily; overriding those two is enough for it to resolve correctly.*/
+/* ================================================================= */
+.dashboard-shell[data-theme="dark"] {
+  --color-bg: #0f172a;
+  --color-surface: #1a2540;
+  --color-border: #2d3e52;
+  --color-text: #f1f5f9;
+  --color-text-muted: #cbd5e1;
+
+  --color-accent: #06b6d4;
+  --color-accent-light: #22d3ee;
+  --color-accent-soft: rgb(6 182 212 / 0.12);
+
+  --shadow-ambient: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow-contact: 0 1px 3px 0 rgb(0 0 0 / 0.4);
+  --shadow-card: 0 20px 40px -12px rgb(0 0 0 / 0.4), 0 8px 16px -8px rgb(0 0 0 / 0.2);
+  --shadow-hover: 0 24px 48px -12px rgb(0 0 0 / 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-shell * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* ================================================================= */
+/* 1. BOX-SIZING SAFETY NET                                          */
+/* ================================================================= */
+.dashboard-shell,
+.dashboard-shell *,
+.dashboard-shell *::before,
+.dashboard-shell *::after {
+  box-sizing: border-box;
+}
+
+/* ================================================================= */
+/* 2. CORE LAYOUT SHELL                                              */
+/* ================================================================= */
+.dashboard-shell {
+  min-height: 100vh;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  width: 100%;
+  transition: background-color var(--duration-standard) var(--ease-standard),
+              color var(--duration-standard) var(--ease-standard);
+}
+
+/* Consistent keyboard focus treatment across the whole shell */
+.dashboard-shell *:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ================================================================= */
+/* 3. FULL-WIDTH TOP HEADER                                          */
+/* ================================================================= */
+.app-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--topbar-height);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--color-surface);
+  padding: 0 var(--space-sm);
+  border-bottom: 1.5px solid var(--color-border);
+  box-shadow: var(--shadow-topbar);
+  transition: background-color var(--duration-standard) var(--ease-standard),
+              border-color var(--duration-standard) var(--ease-standard);
+  backdrop-filter: blur(12px);
+}
+
+/* Interactive logo wrapper styling */
+.dashboard-header-logo-btn {
+  background: none;
+  border: none;
+  padding: 0.375rem 0.625rem;
+  margin-left: -0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+/* Soft hover layout backdrop */
+.dashboard-header-logo-btn:hover {
+  background-color: var(--color-accent-soft);
+}
+
+.dashboard-header-title {
+  margin: 0;
+  text-align: left;
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--color-accent);
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Dropdown Chevron Indicator Styling */
+.logo-dropdown-chevron {
+  width: 1.125rem;
+  height: 1.125rem;
+  color: var(--color-accent);
+  transition: all var(--duration-standard) var(--ease-standard);
+  opacity: 0.8;
+}
+
+/* Micro-interaction layout nudge downwards on click/hover states */
+.dashboard-header-logo-btn:hover .logo-dropdown-chevron {
+  transform: translateY(2px);
+  opacity: 1;
+}
+
+/* ================================================================= */
+/* 4. HEADER PROFILE AVATAR + SETTINGS DROPDOWN                      */
+/* ================================================================= */
+.header-profile-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.header-profile-wrapper .profile-avatar {
+  position: relative;
+  width: 2.5rem;
+  height: 2.5rem;
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-light));
+  border: none;
+  border-radius: calc(var(--radius-md) + 0.125rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: #ffffff;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all var(--duration-standard) var(--ease-standard);
+  box-shadow: 0 4px 12px -2px rgb(8 145 178 / 0.25);
+}
+
+.header-profile-wrapper .profile-avatar:hover,
+.header-profile-wrapper .profile-avatar:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -4px rgb(8 145 178 / 0.35),
+              0 0 0 3px var(--color-accent-soft);
+}
+
+/* Corner "this is a dropdown" indicator — a small ringed circle sitting
+   on the avatar's bottom-right edge, matching var(--color-surface) so
+   it reads as a cutout notch against the avatar's gradient rather than
+   a floating sticker. Sits above .profile-avatar's own hover/focus
+   states since it's a child of that button. */
+.profile-avatar-caret {
+  position: absolute;
+  bottom: -0.1875rem;
+  right: -0.1875rem;
+  width: 1.0625rem;
+  height: 1.0625rem;
+  border-radius: 50%;
+  background-color: var(--color-surface);
+  border: 1.5px solid var(--color-surface);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  transition: transform var(--duration-fast) var(--ease-standard),
+              color var(--duration-fast) var(--ease-standard);
+}
+
+.profile-avatar-caret svg {
+  width: 0.6875rem;
+  height: 0.6875rem;
+}
+
+.header-profile-wrapper .profile-avatar:hover .profile-avatar-caret,
+.header-profile-wrapper .profile-avatar:focus-visible .profile-avatar-caret {
+  color: var(--color-accent);
+}
+
+/* Menu open: chevron flips to point up, matching the "expanded" affordance
+   used elsewhere (e.g. .logo-dropdown-chevron), and picks up the accent
+   color so it's clear which state is active. */
+.profile-avatar-caret-open {
+  transform: rotate(180deg);
+  color: var(--color-accent);
+}
+
+/* Settings dropdown panel, anchored under the avatar */
+.profile-menu {
+  position: absolute;
+  top: calc(100% + 0.625rem);
+  right: 0;
+  min-width: 200px;
+  background-color: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: calc(var(--radius-md) + 0.125rem);
+  box-shadow: 0 20px 40px -8px rgb(8 145 178 / 0.15);
+  padding: 0.75rem;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  backdrop-filter: blur(10px);
+}
+
+.profile-menu-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 0.125rem 0.375rem 0.375rem;
+}
+
+.profile-menu-name {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.profile-menu-role {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.profile-menu-divider {
+  height: 1px;
+  background-color: var(--color-border);
+  margin: 0.125rem 0;
+}
+
+.profile-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* ================================================================= */
+/* 4b. THEME TOGGLE — ANIMATED SUN / HALF-MOON SWITCH                */
+/* The pill-shaped track and knob behave exactly like the old plain   */
+/* checkbox-style switch (knob slides left/right on click), but the   */
+/* knob now contains two stacked icons — a sun and a half-moon — that */
+/* cross-fade and rotate into one another instead of a hard swap.     */
+/* Clicking still only flips the shared `theme` state in the parent   */
+/* component; that state still drives data-theme on .dashboard-shell, */
+/* so every --color-* token (and therefore the whole dashboard's      */
+/* layout colors) still updates instantly on click.                   */
+/* ================================================================= */
+.theme-switch {
+  position: relative;
+  width: 2.75rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  background-color: var(--color-border);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color var(--duration-standard) var(--ease-standard);
+}
+
+.theme-switch-on {
+  background: linear-gradient(90deg, var(--color-accent), var(--color-accent-light));
+}
+
+.theme-switch-knob {
+  position: absolute;
+  top: 0.15rem;
+  left: 0.15rem;
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 50%;
+  background-color: #ffffff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+  transition: transform var(--duration-standard) var(--ease-standard);
+}
+
+.theme-switch-on .theme-switch-knob {
+  transform: translateX(1.25rem);
+}
+
+/* Sun and moon are stacked in the same spot inside the knob — only
+   their opacity/rotation/scale change, so the swap reads as one icon
+   morphing into the other rather than two elements jumping around. */
+.theme-switch-icon {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity var(--duration-standard) var(--ease-standard),
+              transform var(--duration-standard) var(--ease-standard);
+}
+
+.theme-switch-icon svg {
+  width: 0.8rem;
+  height: 0.8rem;
+}
+
+.theme-switch-icon-sun {
+  color: #fbbf24;
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
+.theme-switch-icon-moon {
+  color: #60a5fa;
+  opacity: 0;
+  transform: rotate(90deg) scale(0.4);
+}
+
+.theme-switch-on .theme-switch-icon-sun {
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.4);
+}
+
+.theme-switch-on .theme-switch-icon-moon {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-switch-knob,
+  .theme-switch-icon {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ================================================================= */
+/* 4c. LOG OUT MENU ACTION                                           */
+/* Sits below the theme item, separated by its own divider, so it     */
+/* reads as a distinct "leave the account" action rather than another */
+/* setting. Danger-toned (red) like the delete actions elsewhere in    */
+/* the app, so its intent is legible at a glance. Kept as a fixed red  */
+/* rather than a --color-* token since it's semantic, not neutral      */
+/* chrome — same reasoning as the delete buttons in HistoryLogs.css   */
+/* and DiaryForm.css — with its own dark-mode variant below.          */
+/* ================================================================= */
+.profile-menu-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 0.5rem 0.375rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #dc2626;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.profile-menu-logout-btn:hover,
+.profile-menu-logout-btn:focus-visible {
+  background-color: #fef2f2;
+}
+
+.profile-menu-logout-icon {
+  font-size: 0.9375rem;
+  line-height: 1;
+}
+
+.dashboard-shell[data-theme="dark"] .profile-menu-logout-btn {
+  color: #fca5a5; /* red-300 */
+}
+
+.dashboard-shell[data-theme="dark"] .profile-menu-logout-btn:hover,
+.dashboard-shell[data-theme="dark"] .profile-menu-logout-btn:focus-visible {
+  background-color: rgb(220 38 38 / 0.16);
+}
+
+/* ================================================================= */
+/* 5. MAIN CONTENT AREA                                              */
+/* ================================================================= */
+.dashboard-main-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+  padding-top: var(--topbar-height);
+  padding-bottom: 75px; /* clearance above mobile bottom navbar */
+  transition: padding var(--duration-standard) var(--ease-standard);
+}
+
+.dashboard-tab-panel {
+  flex: 1 1 0%;
+  width: 100%;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: var(--space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* ================================================================= */
+/* 6. RESPONSIVE BREAKPOINTS                                         */
+/* ================================================================= */
+@media (min-width: 768px) {
+  .dashboard-main-content {
+    padding-top: var(--topbar-height);
+    padding-left: var(--sidebar-width);
+    padding-bottom: 0;
+  }
+
+  .app-topbar {
+    padding: 0 var(--space-lg);
+  }
+
+  .dashboard-tab-panel {
+    padding: var(--space-lg);
+  }
+}
+
+@media (min-width: 1600px) {
+  .dashboard-tab-panel {
+    padding-left: var(--space-lg);
+    padding-right: var(--space-lg);
+  }
+}

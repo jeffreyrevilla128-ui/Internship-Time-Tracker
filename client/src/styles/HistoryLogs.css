@@ -1,0 +1,942 @@
+/* src/styles/HistoryLogs.css
+   DARK MODE: neutral/structural colors are written directly with the
+   shared --color-* / --color-accent* tokens (same approach as
+   Sidebar.css, PunchCard.css, and DiaryForm.css), so they repaint
+   automatically when .dashboard-shell's data-theme flips — no extra
+   scoping needed for those. Colors that carry semantic meaning (danger
+   red, success green, the amber "Morning" mobile-card label) stay
+   fixed and get explicit dark-safe variants in the DARK MODE OVERRIDES
+   section at the very bottom of this file. */
+
+/* FIXED: Outer Content Wrapper ensures child card modifications don't collapse global shell properties */
+.dashboard-view-viewport-container {
+  width: 100%;
+  padding: 1.5rem;
+  box-sizing: border-box;
+}
+
+.history-card {
+  background-color: var(--color-surface);
+  padding: 1.5rem;
+  border-radius: 1rem;
+  border: 1px solid var(--color-border);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  position: relative;
+  transition: background-color var(--duration-standard) var(--ease-standard),
+              border-color var(--duration-standard) var(--ease-standard);
+}
+
+/* ================================================================= */
+/* CONTAINER SCOPED TOAST BANNER STRUCTURAL BASE                     */
+/* Semantic colors — stay fixed, dark-safe variants at bottom.       */
+/* ================================================================= */
+/* Zero-height sticky anchor — has no visual presence of its own and adds
+   no space to the document flow (height: 0), but as a `position: sticky`
+   element it tracks to the vertical middle of whichever ancestor actually
+   scrolls (the dashboard's main content pane), staying visible no matter
+   how tall the log list underneath it grows. Its horizontal position is
+   untouched — it simply sits where it always did, inside .history-card's
+   padding box, which already sits clear of the sidebar — so there's no
+   need to hardcode a sidebar width to avoid overlapping it. */
+.toast-sticky-anchor {
+  position: sticky;
+  top: 50vh;
+  height: 0;
+  z-index: 20;
+}
+
+.toast-notification-banner {
+  position: absolute;
+  left: 1.5rem;
+  padding: 0.85rem 1.5rem;
+  border-radius: 0.625rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  z-index: 10; 
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  opacity: 1;
+  transform: translateY(-50%) scale(1.05) translateX(0);
+  transform-origin: center left;
+  transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+  animation: toastSlideRightContainer 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toast-success {
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #16a34a;
+  box-shadow: 0 10px 15px -3px rgba(22, 163, 74, 0.08);
+}
+
+.toast-danger {
+  background-color: #fef2f2;
+  border: 1px solid #fee2e2;
+  color: #dc2626;
+  box-shadow: 0 10px 15px -3px rgba(220, 38, 38, 0.08);
+}
+
+@keyframes toastSlideRightContainer {
+  from { 
+    opacity: 0; 
+    transform: translateY(-50%) scale(1.05) translateX(-20px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(-50%) scale(1.05) translateX(0); 
+  }
+}
+
+.toast-notification-banner.fade-out-active {
+  opacity: 0;
+  transform: translateY(-50%) scale(1.05) translateX(10px);
+}
+
+.history-header {
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.history-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.history-subtitle {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.table-responsive {
+  width: 100%;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.history-table th {
+  background-color: var(--color-bg);
+  color: var(--color-text-muted);
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  border-bottom: 2px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.history-table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+  vertical-align: middle;
+}
+
+.history-table tbody tr:hover {
+  background-color: var(--color-bg);
+}
+
+.history-date-cell { min-width: 110px; }
+.log-primary-date { font-weight: 700; color: var(--color-text); }
+.log-secondary-day { font-size: 0.75rem; color: var(--color-text-muted); margin-top: 0.125rem; }
+
+.punch-sub-row {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.time-val { color: var(--color-text); font-weight: 600; }
+.history-hours-cell { white-space: nowrap; min-width: 140px; }
+
+.duration-stacked-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  line-height: 1.3;
+}
+
+.duration-line-hours,
+.duration-line-minutes {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+.history-diary-cell { width: 150px; max-width: 150px; min-width: 150px; }
+
+.diary-inline-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.row-truncated-text {
+  margin: 0;
+  font-style: italic;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+  font-size: 0.8125rem;
+  display: block;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.diary-view-trigger-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  transition: filter 0.1s ease;
+}
+.diary-view-trigger-btn:hover { filter: brightness(0.85); text-decoration: underline; }
+
+.history-actions-cell { min-width: 150px; }
+.actions-btn-stack { display: flex; gap: 0.375rem; }
+
+.action-btn {
+  flex: 1;
+  padding: 0.375rem 0.5rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  text-align: center;
+  transition: background-color 0.1s ease, filter 0.1s ease;
+}
+
+.btn-update { background-color: var(--color-accent-soft); color: var(--color-accent); }
+.btn-update:hover { filter: brightness(0.95); }
+
+/* Semantic danger action — stays fixed, dark-safe variant at bottom. */
+.btn-delete { background-color: #fef2f2; color: #dc2626; }
+.btn-delete:hover { background-color: #fee2e2; }
+
+/* "Add Attendance History" — sits below the list, full-width, styled as
+   the page's primary call-to-action rather than a small row-level action
+   like .action-btn above it. */
+.add-history-btn {
+  display: block;
+  width: 100%;
+  margin-top: 1.25rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px dashed var(--color-accent);
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  transition: background-color 0.15s ease, filter 0.15s ease;
+}
+
+.add-history-btn:hover {
+  filter: brightness(0.97);
+}
+
+/* ================================================================= */
+/* PREMIUM NATIVE-APP MOBILE STREAM OVERRIDES (max-width: 768px)    */
+/* ================================================================= */
+@media (max-width: 768px) {
+  /* FIXED: Adjust container layout shell padding without tearing down global layout bounds */
+  .dashboard-view-viewport-container {
+    padding: 1rem;
+  }
+
+  .history-card {
+    padding: 1rem;
+    background-color: var(--color-bg); /* Card sits comfortably on parent viewport area background */
+    border: none;
+    box-shadow: none;
+  }
+
+  .history-header {
+    margin-bottom: 1.25rem;
+  }
+
+  /* Flatten table engine elements entirely */
+  .history-table, 
+  .history-table thead, 
+  .history-table tbody, 
+  .history-table th, 
+  .history-table td, 
+  .history-table tr { 
+    display: block; 
+  }
+  
+  /* Mask column headers cleanly off-screen */
+  .history-table thead tr { 
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+  }
+
+  /* COMPONENT-BASED ATTENDANCE CARD ARCHITECTURE */
+  .history-table tr { 
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 1rem;
+    margin-bottom: 1rem;
+    padding: 1.25rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
+    position: relative;
+    transition: transform 0.2s ease;
+  }
+
+  .history-table tr:hover {
+    background-color: var(--color-surface);
+  }
+
+  /* Reset layout defaults for structural table cells */
+  .history-table td { 
+    border: none !important;
+    padding: 0 !important;
+    text-align: left !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    display: block !important;
+    min-height: auto !important;
+  }
+
+  /* Hide the old pseudo-element table labels */
+  .history-table td::before { 
+    display: none !important;
+  }
+
+  /* HEADER BLOCK: TIMELINE DATA */
+  .history-date-cell {
+    display: flex !important;
+    align-items: baseline !important;
+    justify-content: flex-start !important;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--color-border) !important;
+    padding-bottom: 0.75rem !important;
+    margin-bottom: 0.875rem !important;
+  }
+
+  .log-primary-date {
+    font-size: 1.05rem;
+    color: var(--color-text);
+  }
+
+  .log-secondary-day {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    background-color: var(--color-bg);
+    padding: 0.125rem 0.5rem;
+    border-radius: 2rem;
+    margin-top: 0;
+  }
+
+  /* CORE SUB-GRID: AM / PM SHIFT CARDS & METRICS */
+  td[data-label="Morning (AM)"],
+  td[data-label="Afternoon (PM)"] {
+    background-color: var(--color-bg);
+    border: 1px solid var(--color-border) !important;
+    border-radius: 0.625rem;
+    padding: 0.75rem !important;
+    margin-bottom: 0.75rem !important;
+    position: relative;
+  }
+
+  /* "MORNING SHIFT" is a deliberate amber accent unrelated to the brand
+     accent color — stays fixed, dark-safe variant at bottom. */
+  td[data-label="Morning (AM)"]::after {
+    content: "🌅 MORNING SHIFT";
+    position: absolute;
+    top: 0.6rem;
+    right: 0.75rem;
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: #b45309;
+    letter-spacing: 0.025em;
+  }
+
+  /* "AFTERNOON SHIFT" uses the brand accent tone, so it follows the
+     shared accent token and repaints automatically in dark mode. */
+  td[data-label="Afternoon (PM)"]::after {
+    content: "🌤️ AFTERNOON SHIFT";
+    position: absolute;
+    top: 0.6rem;
+    right: 0.75rem;
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: var(--color-accent);
+    letter-spacing: 0.025em;
+  }
+
+  .punch-sub-row {
+    font-size: 0.8125rem;
+    margin-bottom: 0.25rem;
+  }
+  .punch-sub-row:last-child {
+    margin-bottom: 0;
+  }
+
+  /* METRIC BLOCK: TOTAL HOURS WORKED COUNTER — accent tint, follows tokens */
+  .history-hours-cell {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    background: var(--color-accent-soft);
+    border-radius: 0.625rem;
+    padding: 0.75rem 1rem !important;
+    margin-bottom: 0.875rem !important;
+  }
+
+  .history-hours-cell::before {
+    content: "⏱️ Total Logged Time";
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--color-accent);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .duration-stacked-layout {
+    flex-direction: row;
+    gap: 0.25rem;
+    align-items: center;
+  }
+
+  .duration-line-hours,
+  .duration-line-minutes {
+    font-size: 0.875rem;
+    color: var(--color-accent);
+  }
+
+  /* CONTENT BLOCK: NARRATIVE DIARY SUMMARY */
+  .history-diary-cell {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    margin-bottom: 1rem !important;
+  }
+
+  .diary-inline-container {
+    align-items: flex-start !important;
+    gap: 0.5rem;
+  }
+
+  .row-truncated-text {
+    text-align: left !important;
+    white-space: normal !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2; 
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  .diary-view-trigger-btn {
+    font-size: 0.8rem;
+    padding: 0.25rem 0;
+  }
+
+  /* CONTROL BLOCK: SYSTEM ACTION TRIGGER ROW */
+  .history-actions-cell {
+    border-top: 1px solid var(--color-border) !important;
+    padding-top: 0.875rem !important;
+    margin-top: 0.5rem;
+  }
+
+  .actions-btn-stack {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.625rem;
+  }
+
+  .action-btn {
+    padding: 0.625rem 1rem !important;
+    font-size: 0.8rem !important;
+    border-radius: 0.5rem !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+  }
+
+  /* Toast Adjustments — stays vertically centered via the sticky anchor;
+     just goes full-width instead of the desktop's left-aligned width. */
+  .toast-notification-banner {
+    left: 1rem;
+    right: 1rem;
+    transform-origin: center;
+  }
+}
+
+/* ================================================================= */
+/* MODAL OVERLAY STRUCTURAL LAYERS                                   */
+/* ================================================================= */
+.diary-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1.5rem;
+}
+
+.diary-modal-card {
+  background-color: var(--color-surface);
+  width: 100%;
+  max-width: 540px;
+  max-height: 85vh; 
+  border-radius: 1rem;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Applied only to the Add/Edit Attendance forms (not the read-only View
+   or the Delete confirmation, which stay at the base 540px). On roomy
+   desktop/laptop widths this widens the card and switches the shift-grid
+   + diary pairing below to sit side by side instead of stacked, so the
+   diary field no longer pushes below the fold inside
+   .modal-form-scrollable. Below that width nothing changes — same
+   single-column stack as before. */
+@media (min-width: 860px) {
+  .diary-modal-card-wide {
+    max-width: 900px;
+  }
+
+  .modal-form-desktop-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+    align-items: stretch;
+    gap: 1.75rem;
+  }
+
+  .modal-form-desktop-split .modal-form-grid {
+    margin-bottom: 0;
+  }
+
+  .modal-form-desktop-split .form-textarea-section {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .modal-form-desktop-split .form-textarea-field {
+    flex: 1;
+  }
+
+  .modal-form-desktop-split .form-textarea-field textarea {
+    flex: 1;
+    height: 100%;
+    min-height: 260px;
+  }
+
+  /* The split layout is short enough end-to-end that the inner scroll
+     area rarely needs to scroll at all now — but keep a taller cap
+     rather than removing it outright, for short laptop viewports where
+     the modal's max-height: 85vh still constrains things. */
+  .diary-modal-card-wide .modal-form-scrollable {
+    max-height: 560px;
+  }
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.modal-card-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background-color: var(--color-bg);
+  flex-shrink: 0;
+}
+
+.modal-card-title { margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--color-text); }
+.modal-card-subtitle { margin: 0.25rem 0 0 0; font-size: 0.75rem; color: var(--color-text-muted); font-weight: 600; }
+
+.modal-close-x-btn {
+  background: transparent; border: none; font-size: 1rem; color: var(--color-text-muted);
+  cursor: pointer; padding: 0.25rem; border-radius: 0.375rem;
+}
+.modal-close-x-btn:hover { color: var(--color-text); background-color: var(--color-border); }
+
+.modal-card-body { padding: 1.5rem; overflow-x: hidden; }
+.max-height-view { max-height: 320px; overflow-y: auto; }
+.modal-form-scrollable { max-height: 480px; overflow-y: auto; }
+.modal-diary-fulltext { margin: 0; font-size: 0.875rem; line-height: 1.6; color: var(--color-text); font-style: italic; white-space: pre-wrap; word-break: break-word; }
+
+/* ================================================================= */
+/* RED COMPONENT THEME: CONFIRMATION MODAL EXTENSIONS                */
+/* Semantic danger colors — stay fixed, dark-safe variants at bottom.*/
+/* ================================================================= */
+.confirm-delete-modal { max-width: 440px; }
+.delete-header { background-color: #fef2f2; border-bottom: 1px solid #fee2e2; }
+.text-danger { color: #991b1b !important; }
+.close-x-danger:hover { color: #991b1b; background-color: #fee2e2; }
+.text-center-padding { padding: 2rem 1.5rem; text-align: center; }
+.delete-alert-icon { font-size: 2.25rem; margin-bottom: 0.75rem; }
+.delete-warning-text { margin: 0; font-size: 0.875rem; line-height: 1.5; color: var(--color-text-muted); }
+.delete-footer { background-color: var(--color-bg); border-top: 1px solid var(--color-border); }
+
+.modal-confirm-delete-btn {
+  background-color: #dc2626; color: #ffffff; border: none;
+  padding: 0.5rem 1.25rem; border-radius: 0.5rem; font-size: 0.75rem;
+  font-weight: 700; cursor: pointer; transition: background-color 0.15s ease;
+}
+.modal-confirm-delete-btn:hover { background-color: #b91c1c; }
+
+/* ================================================================= */
+/* FOCUS SHIFT ANCHOR GRID UNITS                                    */
+/* ================================================================= */
+.modal-form-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1.75rem; 
+  margin-bottom: 1rem; padding: 0.75rem 0.5rem; align-items: center;
+}
+
+@media (max-width: 500px) {
+  .modal-form-grid { grid-template-columns: 1fr; gap: 1.25rem; }
+}
+
+.form-textarea-section { margin-top: 0.75rem; margin-bottom: 0.75rem; width: calc(100% - 1rem); margin-left: 0.5rem; }
+
+.shift-focus-card {
+  background-color: var(--color-bg); padding: 1rem; border-radius: 0.75rem; border: 1px solid var(--color-border);
+  display: flex; flex-direction: column; gap: 0.75rem;
+  transition: transform 0.25s ease-in-out, opacity 0.25s ease-in-out, border-color 0.25s ease-in-out, box-shadow 0.25s ease-in-out;
+  transform-origin: center center;
+}
+
+.clickable-form-card { cursor: pointer; }
+
+/* Focused-state glow uses a fixed accent-blue rgba so it stays a
+   recognizable "focus ring" color; the dark-mode variant at the bottom
+   swaps it to the dark-mode accent's rgb so the glow still matches the
+   accent color currently in use rather than looking mismatched. */
+.shift-focus-card.focused-shift { transform: scale(1.10); background-color: var(--color-surface); border-color: var(--color-accent); box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.1), 0 4px 6px -4px rgba(37, 99, 235, 0.1); z-index: 5; }
+.shift-focus-card.focused-shift input { outline: none; }
+.shift-focus-card.dimmed-shift { transform: scale(0.90); opacity: 0.55; border-color: var(--color-border); filter: grayscale(15%); }
+.shift-focus-card.focused-diary { transform: scale(1.06); background-color: var(--color-surface); border-color: var(--color-accent); box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.1), 0 4px 6px -4px rgba(37, 99, 235, 0.1); z-index: 5; }
+.shift-focus-card.standard-diary-layout { transform: scale(1.0); opacity: 1; }
+.form-section-heading { margin: 0 0 0.125rem 0; font-size: 0.8125rem; font-weight: 700; color: var(--color-text-muted); }
+
+.form-input-field, .form-textarea-field { display: flex; flex-direction: column; gap: 0.375rem; }
+.form-input-field label, .form-textarea-field label { font-size: 0.75rem; font-weight: 700; color: var(--color-text-muted); }
+.form-input-field input[type="time"], .form-input-field input[type="date"] { width: 100%; padding: 0.5rem; border-radius: 0.5rem; border: 1px solid var(--color-border); font-size: 0.875rem; font-weight: 600; color: var(--color-text); background-color: var(--color-surface); }
+.form-textarea-field textarea { width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: 0.5rem; font-size: 0.875rem; font-family: inherit; color: var(--color-text); background-color: var(--color-surface); resize: vertical; line-height: 1.5; }
+.form-textarea-field textarea:focus, .form-input-field input:focus { outline: none; border-color: var(--color-accent); }
+
+/* Inline validation error — e.g. Add Attendance History's Date field
+   rejecting a future date. Red, distinct from the amber "attention" tone
+   used for .existing-record-notice/.modal-input-warning, since this is a
+   hard validation failure that blocks saving, not just a heads-up. */
+.form-input-field input.field-input-error {
+  border-color: #dc2626;
+}
+.form-input-field input.field-input-error:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgb(220 38 38 / 0.15);
+}
+.field-error-text {
+  margin: 0.125rem 0 0 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #dc2626;
+}
+
+/* Shown in the Add Attendance History modal when the chosen date already
+   has a record — reuses the same amber "attention" tone established
+   elsewhere in the app (MetricHeader's setup banner, DiaryForm's Half Day
+   badge) rather than introducing a new semantic color. */
+.existing-record-notice {
+  margin: 0 0 0.25rem 0;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.5rem;
+  border: 1px solid #fde68a;
+  background-color: rgb(255 251 235 / 0.6);
+  color: #92400e;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.modal-card-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--color-border); display: flex; justify-content: flex-end; align-items: center; gap: 0.5rem; background-color: var(--color-bg); flex-shrink: 0; }
+.modal-footer-timestamp { font-size: 0.7rem; color: var(--color-text-muted); margin-right: auto; }
+.modal-footer-hint { margin-right: auto; margin-top: 0; }
+
+/* .modal-close-action-btn is a fixed "ink" swatch rather than a token
+   reference on purpose — see the identical note in DiaryForm.css.
+   --color-text becomes a light color in dark mode, which would make a
+   background-color rule invisible, so its dark variant is set
+   explicitly below instead. */
+.modal-close-action-btn, .modal-save-action-btn {
+  background-color: #0f172a; color: #ffffff; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem;
+  font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+.modal-close-action-btn:hover { background-color: #1e293b; }
+.modal-save-action-btn { background-color: var(--color-accent); }
+.modal-save-action-btn:hover:not(:disabled) { filter: brightness(0.9); }
+.modal-save-action-btn:disabled { background-color: var(--color-border); color: var(--color-text-muted); cursor: not-allowed; opacity: 0.7; }
+
+.modal-cancel-inline-btn { background-color: var(--color-surface); color: var(--color-text-muted); border: 1px solid var(--color-border); padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.75rem; font-weight: 700; cursor: pointer; }
+.modal-cancel-inline-btn:hover { background-color: var(--color-bg); color: var(--color-text); }
+
+/* ================================================================= */
+/* SEARCH & FILTER UI UTILITY SECTION MODIFICATIONS                 */
+/* ================================================================= */
+.filter-utilities-panel {
+  display: grid;
+  grid-template-columns: 1fr 200px;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  background-color: var(--color-bg);
+  padding: 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-border);
+  align-items: center;
+}
+
+.search-input-wrapper,
+.dropdown-select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.search-input-wrapper:focus-within,
+.dropdown-select-wrapper:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.input-utility-icon {
+  position: absolute;
+  left: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.filter-search-field {
+  width: 100%;
+  padding: 0.625rem 0.75rem 0.625rem 2.25rem;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.875rem;
+  color: var(--color-text);
+}
+
+.filter-search-field::placeholder {
+  color: var(--color-text-muted);
+}
+
+.filter-dropdown-select {
+  width: 100%;
+  padding: 0.625rem 2rem 0.625rem 2.25rem;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
+  cursor: pointer;
+  appearance: none;
+  /* Tells the browser which palette (light/dark) to use for native UI
+     it renders itself — the closed select box already inherits our
+     theme via color/background above, but the popup options list is
+     drawn by the OS/browser using UA defaults unless this is set. */
+  color-scheme: light dark;
+}
+
+/* The options popup ignores our normal cascade (it's rendered outside
+   the page's paint layer in most browsers), so it needs its own
+   explicit background/color instead of relying on inheritance. This
+   keeps every option legible immediately on open, not just on hover. */
+.filter-dropdown-select option {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+.filter-dropdown-select option:checked,
+.filter-dropdown-select option:hover {
+  background-color: var(--color-accent-soft);
+  color: var(--color-text);
+}
+
+/* Custom Dropdown Chevron Icon Arrow */
+.dropdown-select-wrapper::after {
+  content: "▼";
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+  position: absolute;
+  right: 0.75rem;
+  pointer-events: none;
+}
+
+/* ================================================================= */
+/* SYSTEM SYSTEM EMPTY STATE INTERACTION LAYOUT                     */
+/* ================================================================= */
+.empty-state-fallback {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  background-color: var(--color-surface);
+  border: 2px dashed var(--color-border);
+  border-radius: 1rem;
+  margin: 1rem 0;
+}
+
+.empty-state-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.empty-state-title {
+  margin: 0 0 0.375rem 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.empty-state-subtitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  max-width: 380px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.5;
+}
+
+/* ================================================================= */
+/* RESPONSIVE MOBILE STACK RULES (INSIDE EXISTING MEDIA INQUIRY)    */
+/* ================================================================= */
+@media (max-width: 768px) {
+  .filter-utilities-panel {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    padding: 0.875rem;
+    margin-bottom: 1rem;
+  }
+}
+
+/* ================================================================= */
+/* DARK MODE OVERRIDES                                               */
+/* Everything above already follows dark mode automatically wherever  */
+/* it references a --color-* or --color-accent* token, exactly like   */
+/* Sidebar.css, PunchCard.css, and DiaryForm.css — no extra scoping   */
+/* needed for those. The rules below cover only the colors            */
+/* deliberately left fixed because they carry semantic meaning        */
+/* (danger red, success green, the amber "Morning" mobile label),     */
+/* plus the fixed-ink .modal-close-action-btn and the focus-ring glow  */
+/* on .focused-shift / .focused-diary, both of which intentionally    */
+/* don't track tokens directly (see their comments above).            */
+/* ================================================================= */
+.dashboard-shell[data-theme="dark"] .toast-success {
+  background-color: rgb(22 163 74 / 0.16);
+  border-color: rgb(74 222 128 / 0.35);
+  color: #86efac; /* green-300 */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.35);
+}
+
+.dashboard-shell[data-theme="dark"] .toast-danger {
+  background-color: rgb(220 38 38 / 0.16);
+  border-color: rgb(248 113 113 / 0.35);
+  color: #fca5a5; /* red-300 */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.35);
+}
+
+.dashboard-shell[data-theme="dark"] .btn-delete {
+  background-color: rgb(220 38 38 / 0.16);
+  color: #fca5a5; /* red-300 */
+}
+
+.dashboard-shell[data-theme="dark"] .btn-delete:hover {
+  background-color: rgb(220 38 38 / 0.28);
+}
+
+.dashboard-shell[data-theme="dark"] .existing-record-notice {
+  background-color: rgb(217 119 6 / 0.16);
+  border-color: rgb(245 158 11 / 0.35);
+  color: #fbbf24; /* amber-400 */
+}
+
+.dashboard-shell[data-theme="dark"] .field-error-text {
+  color: #f87171; /* red-400 — brighter so it stays legible on dark cards */
+}
+.dashboard-shell[data-theme="dark"] .form-input-field input.field-input-error {
+  border-color: #f87171;
+}
+
+.dashboard-shell[data-theme="dark"] td[data-label="Morning (AM)"]::after {
+  color: #fbbf24; /* amber-400 — brighter so it stays legible on dark cards */
+}
+
+.dashboard-shell[data-theme="dark"] .delete-header {
+  background-color: rgb(220 38 38 / 0.14);
+  border-bottom-color: rgb(248 113 113 / 0.3);
+}
+
+.dashboard-shell[data-theme="dark"] .text-danger {
+  color: #fca5a5 !important; /* red-300 */
+}
+
+.dashboard-shell[data-theme="dark"] .close-x-danger:hover {
+  color: #fca5a5;
+  background-color: rgb(220 38 38 / 0.22);
+}
+
+.dashboard-shell[data-theme="dark"] .modal-confirm-delete-btn {
+  background-color: #ef4444; /* red-500 — brighter, reads better on a dark surface */
+}
+
+.dashboard-shell[data-theme="dark"] .modal-confirm-delete-btn:hover {
+  background-color: #dc2626; /* red-600 */
+}
+
+.dashboard-shell[data-theme="dark"] .modal-close-action-btn {
+  background-color: #475569; /* slate-600 — stays legible against a dark card, unlike near-black */
+}
+
+.dashboard-shell[data-theme="dark"] .modal-close-action-btn:hover {
+  background-color: #334155; /* slate-700 */
+}
+
+.dashboard-shell[data-theme="dark"] .shift-focus-card.focused-shift,
+.dashboard-shell[data-theme="dark"] .shift-focus-card.focused-diary {
+  box-shadow: 0 10px 15px -3px rgba(96, 165, 250, 0.18), 0 4px 6px -4px rgba(96, 165, 250, 0.18);
+}

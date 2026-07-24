@@ -1,0 +1,305 @@
+/* src/styles/Sidebar.css */
+
+/* Core Sidebar Layout - Base rules apply the Bottom Mobile Navbar */
+.dashboard-sidebar {
+  position: fixed;
+  bottom: 0; /* Anchored explicitly to the bottom of the viewport */
+  left: 0;
+  right: 0;
+  height: auto; 
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  z-index: 49;
+  
+  /* Smoothly rounded top corners only */
+  border-radius: 20px 20px 0 0;
+  border-top: 1px solid #e5e7eb;
+  
+  /* Uplifting shadow frame to separate navbar from content layer underneath */
+  box-shadow: 0 -2px 10px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* Isolates desktop branding structures out of mobile rendering templates */
+.desktop-only {
+  display: none !important;
+}
+
+.sidebar-menu-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* Navigation List Container: Formats items into an even horizontal bar */
+.sidebar-nav-container {
+  padding: 0.75rem 1rem; /* Slightly padded for comfortable touch targets */
+  display: flex;
+  flex-direction: row; 
+  justify-content: space-around;
+  gap: 0.5rem;
+}
+
+/* Base Nav-Link Layout Rules — mobile stacks icon above label so each
+   tab reads clearly instead of relying on the icon glyph alone.
+   flex: 1 gives all four tabs equal width so the row stays balanced
+   regardless of label length. */
+.nav-link {
+  padding: 0.5rem 0.375rem;
+  border-radius: 0.625rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  color: #64748b;
+  transition: all 0.15s ease;
+  flex: 1;
+  min-width: 0;
+}
+
+.nav-icon {
+  display: inline-block;
+  font-size: 1.25rem; /* Icon emphasis sizing, previously lived on .nav-link */
+  line-height: 1;
+}
+
+/* Mobile label: small, centered, single line so four labels fit the
+   navbar width without wrapping or crowding each other. */
+.sidebar-nav-container .link-text {
+  display: block;
+  font-size: 0.625rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Interactive Navigation Active/Inactive States */
+.nav-link-active {
+  background-color: #f1f5f9;
+  color: #2563eb;
+}
+
+.nav-link-inactive:hover {
+  background-color: #f8fafc;
+  color: #1e293b;
+}
+
+/* Locked tabs (Time In/Out, Narrative Diary, Attendance History) until
+   Required Hours + Start Date are configured. Overrides both the active
+   and inactive hover states, since a locked tab should never look
+   selectable regardless of which of those two classes it also carries. */
+.nav-link-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.nav-link-disabled:hover {
+  background-color: transparent;
+  color: #64748b;
+}
+
+/* ================================================================= */
+/* DESKTOP RESPONSIVENESS OVERRIDES (768px and up)                  */
+/* ================================================================= */
+@media (min-width: 768px) {
+  .dashboard-sidebar {
+    top: 64px; /* Docks right beneath full-width top header on desktop */
+    bottom: 0;
+    width: 260px;
+    height: auto;
+    right: auto;
+    flex-direction: column;
+    justify-content: space-between;
+    
+    /* Remove the mobile rounded top corners and shadow layout rules */
+    border-radius: 0;
+    border-top: none;
+    border-right: 1px solid #e5e7eb;
+    box-shadow: none;
+  }
+
+  /* Reactivates elements belonging exclusively to the side column frame */
+  .desktop-only {
+    display: flex !important;
+  }
+  
+  .sidebar-brand-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .sidebar-logo {
+    font-size: 1.125rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: #2563eb;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .sidebar-nav-container {
+    padding: 1rem;
+    flex-direction: column; /* Stack vertically on wide viewports */
+    justify-content: flex-start;
+    gap: 0.375rem;
+  }
+
+  /* Desktop reverts the mobile icon-over-label stack back to a single
+     row: icon and label side by side, as in the original design. */
+  .nav-link {
+    width: 100%;
+    flex: none;
+    flex-direction: row;
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    justify-content: flex-start;
+    gap: 0.75rem;
+  }
+
+  .nav-icon {
+    font-size: 1.125rem;
+  }
+
+  /* Reactivates descriptions on desktop viewport sizes, at normal
+     paragraph size rather than the small mobile label size. */
+  .sidebar-nav-container .link-text {
+    display: inline;
+    font-size: 0.875rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: clip;
+    max-width: none;
+  }
+
+  /* Desktop Selected States */
+  .nav-link-active {
+    background-color: #2563eb; 
+    color: #ffffff;
+  }
+
+  .nav-link-inactive:hover {
+    background-color: #f1f5f9;
+    color: #0f172a;
+  }
+
+  .nav-link-disabled:hover {
+    background-color: transparent;
+    color: #64748b;
+  }
+
+  /* Footer Profile Card Details */
+  .sidebar-profile-card {
+    padding: 1rem;
+    border-top: 1px solid #e5e7eb;
+    background-color: #f8fafc;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .profile-avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    background: linear-gradient(135deg, #2563eb, #60a5fa);
+    border-radius: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: #ffffff;
+  }
+
+  .profile-info-block {
+    min-width: 0;
+  }
+
+  .profile-username {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .profile-user-role {
+    display: block;
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-top: 0.125rem;
+  }
+}
+
+/* ================================================================ */
+/* DARK MODE SUPPORT                                                */
+/* ================================================================ */
+
+.dashboard-sidebar{
+  background:var(--color-surface);
+  border-top-color:var(--color-border);
+  border-right-color:var(--color-border);
+  box-shadow:0 -2px 10px rgba(0,0,0,.18);
+  transition:background-color var(--duration-standard) var(--ease-standard),
+             border-color var(--duration-standard) var(--ease-standard);
+}
+
+.nav-link{color:var(--color-text-muted);}
+.nav-link-active{
+  background:var(--color-accent-soft);
+  color:var(--color-accent);
+}
+.nav-link-inactive:hover{
+  background:var(--color-accent-soft);
+  color:var(--color-text);
+}
+.nav-link-disabled:hover{
+  background:transparent;
+  color:var(--color-text-muted);
+}
+
+@media (min-width:768px){
+  .sidebar-brand-header{
+    border-bottom:1px solid var(--color-border);
+  }
+
+  .sidebar-logo{
+    color:var(--color-accent);
+  }
+
+  .sidebar-profile-card{
+    background:var(--color-bg);
+    border-top:1px solid var(--color-border);
+  }
+
+  .profile-username{
+    color:var(--color-text);
+  }
+
+  .profile-user-role{
+    color:var(--color-text-muted);
+  }
+
+  .dashboard-shell[data-theme="dark"] .nav-link-active{
+    background:var(--color-accent);
+    color:#fff;
+  }
+
+  .dashboard-shell[data-theme="dark"] .nav-link-inactive:hover{
+    background:rgba(96,165,250,.12);
+    color:var(--color-text);
+  }
+}

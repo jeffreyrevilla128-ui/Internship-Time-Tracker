@@ -1,0 +1,567 @@
+/* src/styles/AttendanceCalendar.css */
+
+/* ==========================================================================
+   1. Component Container Wrapper
+   ========================================================================== */
+.calendar-card {
+  background-color: var(--color-surface);
+  padding: 2rem;
+  border-radius: 1.125rem;
+  border: 1.5px solid var(--color-border);
+  box-shadow: var(--shadow-card);
+  transition: background-color var(--duration-standard) var(--ease-standard),
+              border-color var(--duration-standard) var(--ease-standard),
+              box-shadow var(--duration-standard) var(--ease-standard);
+}
+
+/* Flex Container for Title and 'Today' Reset Button */
+.calendar-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.calendar-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.015em;
+}
+
+/* 'Today' Quick Return Action Button */
+.calendar-today-btn {
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-border);
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all var(--duration-standard) var(--ease-standard);
+}
+
+.calendar-today-btn:hover {
+  background-color: var(--color-accent-soft);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* ==========================================================================
+   2. Inner Structural Matrix Frame & Month Header Navigation
+   ========================================================================== */
+.calendar-inner-box {
+  border: 1.5px solid var(--color-border);
+  border-radius: 0.875rem;
+  padding: 1.25rem;
+  background-color: var(--color-bg);
+  transition: all var(--duration-standard) var(--ease-standard);
+}
+
+/* Locked placeholder shown in place of .calendar-inner-box + legend when
+   Required Hours / Start Date haven't been configured yet */
+.calendar-locked-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 3rem 2rem;
+  border: 2px dashed var(--color-border);
+  border-radius: 0.875rem;
+  background-color: var(--color-bg);
+  text-align: center;
+  transition: all var(--duration-standard) var(--ease-standard);
+}
+
+.calendar-locked-icon {
+  font-size: 2rem;
+  opacity: 0.5;
+}
+
+.calendar-locked-text {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  max-width: 28ch;
+}
+
+/* Interactive Navigation Bar Header Layout (< Month/Year >) */
+.calendar-navigation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.calendar-month-label {
+  font-weight: 700;
+  font-size: 0.75rem; /* text-xs */
+  color: #334155; /* text-slate-700 */
+  text-transform: uppercase;
+  letter-spacing: 0.05em; /* tracking-wide */
+  display: flex;
+  align-items: center;
+}
+
+/* Navigation Arrow Controls Buttons */
+.calendar-nav-btn {
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  color: var(--color-text-muted);
+  border-radius: 0.5rem;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all var(--duration-standard) var(--ease-standard);
+}
+
+.calendar-nav-btn:hover {
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+/* Prev-month button when the view is already on the configured Start
+   Date's month — can't navigate any earlier. */
+.calendar-nav-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.calendar-nav-btn:disabled:hover {
+  background-color: var(--color-surface);
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
+}
+
+/* Loading Spinner Indicator */
+.calendar-spinner {
+  font-size: 10px;
+  margin-left: 0.25rem;
+  display: inline-block;
+}
+
+/* ==========================================================================
+   3. Calendar Days Grid Layout
+   ========================================================================== */
+/* Weekday Indicators Row (Su, Mo, Tu...) */
+.calendar-week-labels {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.25rem;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8; /* text-slate-400 */
+  margin-bottom: 0.5rem;
+}
+
+/* 7-Column Days Grid Layout Matrix */
+.calendar-days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.25rem;
+  text-align: center;
+  font-size: 0.75rem; /* text-xs */
+}
+
+/* Individual Day Blueprint Cell */
+.calendar-day-cell {
+  box-sizing: border-box;
+  padding: 0.625rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  transition: all var(--duration-standard) var(--ease-standard);
+  position: relative;
+  min-height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+}
+
+/* ==========================================================================
+   4. Core Functional Shift & Holiday State Layers
+   ========================================================================== */
+.day-upcoming {
+  background-color: var(--color-surface);
+  color: var(--color-text-muted);
+  border: 1.5px solid var(--color-border);
+}
+
+.day-upcoming:hover {
+  border-color: var(--color-accent);
+}
+
+.day-completed {
+  background-color: rgb(16 185 129 / 0.1);
+  color: #10b981;
+  font-weight: 700;
+  border: 1.5px solid rgb(16 185 129 / 0.4);
+}
+
+.day-current {
+  background: linear-gradient(135deg, var(--color-accent-soft), rgb(6 182 212 / 0.05));
+  color: var(--color-accent);
+  font-weight: 800;
+  border: 2px solid var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+/* Holiday Day Core Class Styles */
+.day-holiday {
+  background: linear-gradient(135deg, rgb(253 224 71 / 0.12), rgb(250 204 21 / 0.08));
+  color: #f59e0b;
+  font-weight: 800;
+  border: 2px solid #fbbf24;
+  cursor: pointer;
+  box-shadow: 0 2px 8px -2px rgb(251 191 36 / 0.2);
+}
+
+.day-holiday:hover,
+.day-holiday:focus-visible {
+  background: linear-gradient(135deg, rgb(253 224 71 / 0.18), rgb(250 204 21 / 0.12));
+  border-color: #f59e0b;
+  box-shadow: 0 4px 12px -2px rgb(251 191 36 / 0.3);
+  transform: translateY(-2px);
+  outline: none;
+}
+
+/* Present: green accent — a completed shift */
+.day-present {
+  background: linear-gradient(135deg, rgb(16 185 129 / 0.12), rgb(52 211 153 / 0.08));
+  color: #10b981;
+  font-weight: 800;
+  border: 2px solid #34d399;
+  cursor: pointer;
+  box-shadow: 0 2px 8px -2px rgb(16 185 129 / 0.2);
+}
+
+.day-present:hover,
+.day-present:focus-visible {
+  background: linear-gradient(135deg, rgb(16 185 129 / 0.18), rgb(52 211 153 / 0.12));
+  border-color: #10b981;
+  box-shadow: 0 4px 12px -2px rgb(16 185 129 / 0.3);
+  transform: translateY(-2px);
+  outline: none;
+}
+
+/* Absent: red accent — standard working day with no logged shift */
+.day-absent {
+  background: linear-gradient(135deg, rgb(239 68 68 / 0.12), rgb(248 113 113 / 0.08));
+  color: #ef4444;
+  font-weight: 800;
+  border: 2px solid #f87171;
+  cursor: help;
+  box-shadow: 0 2px 8px -2px rgb(239 68 68 / 0.2);
+}
+
+.day-absent:hover {
+  background: linear-gradient(135deg, rgb(239 68 68 / 0.18), rgb(248 113 113 / 0.12));
+  box-shadow: 0 4px 12px -2px rgb(239 68 68 / 0.3);
+}
+
+/* Weekend: neutral, deliberately excluded from tracking */
+.day-weekend {
+  background-color: var(--color-bg);
+  color: var(--color-text-muted);
+  border: 1.5px solid var(--color-border);
+}
+
+/* Subtle dot badge positioned centered beneath the day figure number */
+.holiday-indicator-dot {
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  background-color: #ca8a04; /* yellow-600 */
+  border-radius: 50%;
+}
+
+/* ==========================================================================
+   5. Dynamic Visible Holidays Breakdown Display Section
+   ========================================================================== */
+.calendar-holidays-display {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background-color: #fff1f2; /* bg-rose-50 */
+  border: 1px dashed #fecdd3; /* border-rose-200 */
+  border-radius: 0.5rem;
+}
+
+.calendar-holidays-display h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: #be123c; /* text-rose-700 */
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.holiday-list-container {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.holiday-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 11px;
+  color: #4c0519; /* text-rose-950 */
+}
+
+.holiday-list-day {
+  background-color: #e11d48; /* bg-rose-600 */
+  color: #ffffff;
+  font-weight: 700;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+
+.holiday-list-name {
+  font-weight: 500;
+}
+
+/* ==========================================================================
+   6. Map Legend Indicators & Typography UI
+   ========================================================================== */
+.calendar-legend {
+  margin-top: 1.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  padding-top: 1.25rem;
+  border-top: 1.5px solid var(--color-border);
+}
+
+.legend-columns {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+/* Desktop: lay all three indicators out in a single balanced row so
+   Holiday sits to the right of Absent instead of wrapping below Present. */
+@media (min-width: 768px) {
+  .legend-columns {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+/* Square indicators */
+.legend-dot {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 0.25rem;
+  box-shadow: 0 1px 3px -1px rgba(0, 0, 0, 0.2);
+}
+
+.dot-emerald { background: linear-gradient(135deg, #10b981, #34d399); }
+.dot-yellow { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
+.dot-green { background: linear-gradient(135deg, #10b981, #34d399); }
+.dot-red { background: linear-gradient(135deg, #ef4444, #f87171); }
+
+/* ==========================================================================
+   8. View Attendance Modal — Read-Only Details Extension
+   ========================================================================== */
+/* Reuses the shared .diary-modal-overlay / .diary-modal-card / .modal-card-*
+   classes defined in HistoryLogs.css so this modal looks identical to the
+   Update History Log modal. These small additions only cover the
+   read-only value display and inner scroll area that are unique to this view. */
+
+.view-readonly-value {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.5rem;
+  border: 1.5px solid var(--color-border);
+  background-color: var(--color-bg);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
+  transition: all var(--duration-standard) var(--ease-standard);
+}
+
+.no-side-padding {
+  padding-left: 0;
+  padding-right: 0;
+  padding-top: 0.25rem;
+}
+
+/* Holiday modal accents — reuses the shared modal structure but tints the
+   readonly fields to match the Holiday cell/legend color for consistency. */
+.holiday-modal-card {
+  border-top: 3px solid #ca8a04; /* yellow-600 */
+}
+
+.holiday-detail-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.holiday-readonly-value {
+  background-color: #fefce8; /* yellow-50 */
+  border-color: #fde68a; /* yellow-200 */
+  color: #a16207; /* yellow-700 */
+}
+
+/* ================================================================= */
+/* DARK MODE SUPPORT (inherits theme tokens from .dashboard-shell)   */
+/* ================================================================= */
+
+.calendar-card{
+  background-color:var(--color-surface);
+  border-color:var(--color-border);
+  color:var(--color-text);
+  transition:background-color var(--duration-standard) var(--ease-standard),
+             border-color var(--duration-standard) var(--ease-standard),
+             color var(--duration-standard) var(--ease-standard);
+}
+
+.calendar-title{color:var(--color-text);}
+
+.calendar-today-btn{
+  background:var(--color-bg);
+  color:var(--color-text);
+  border:1px solid var(--color-border);
+}
+.calendar-today-btn:hover{
+  background:var(--color-accent-soft);
+}
+
+.calendar-inner-box{
+  background:color-mix(in srgb, var(--color-bg) 70%, var(--color-surface));
+  border-color:var(--color-border);
+}
+
+.calendar-locked-state{
+  background:color-mix(in srgb, var(--color-bg) 70%, var(--color-surface));
+  border-color:var(--color-border);
+}
+.calendar-locked-text{
+  color:var(--color-text-muted);
+}
+
+.calendar-month-label{color:var(--color-text);}
+
+.calendar-nav-btn{
+  background:var(--color-surface);
+  border-color:var(--color-border);
+  color:var(--color-text-muted);
+}
+.calendar-nav-btn:hover{
+  background:var(--color-accent-soft);
+  color:var(--color-text);
+  border-color:var(--color-accent);
+}
+.calendar-nav-btn:disabled:hover{
+  background:var(--color-surface);
+  color:var(--color-text-muted);
+  border-color:var(--color-border);
+}
+
+.calendar-week-labels{color:var(--color-text-muted);}
+
+.day-upcoming{
+  background:var(--color-surface);
+  color:var(--color-text);
+  border-color:var(--color-border);
+}
+
+.day-weekend{
+  background:color-mix(in srgb, var(--color-bg) 82%, var(--color-surface));
+  color:var(--color-text-muted);
+  border-color:var(--color-border);
+}
+
+.dashboard-shell[data-theme="dark"] .day-current{
+  background:rgba(37,99,235,.18);
+  color:#93c5fd;
+  border-color:rgba(96,165,250,.45);
+}
+
+.dashboard-shell[data-theme="dark"] .day-present{
+  background:rgba(22,163,74,.16);
+  color:#86efac;
+  border-color:#22c55e;
+}
+
+.dashboard-shell[data-theme="dark"] .day-absent{
+  background:rgba(220,38,38,.16);
+  color:#fca5a5;
+  border-color:#ef4444;
+}
+
+.dashboard-shell[data-theme="dark"] .day-holiday{
+  background:rgba(202,138,4,.16);
+  color:#fde68a;
+  border-color:#fbbf24;
+}
+.dashboard-shell[data-theme="dark"] .day-holiday:hover,
+.dashboard-shell[data-theme="dark"] .day-holiday:focus-visible{
+  background:rgba(202,138,4,.24);
+  border-color:#fcd34d;
+  box-shadow:0 0 0 2px rgba(251,191,36,.25);
+}
+
+.dashboard-shell[data-theme="dark"] .holiday-indicator-dot{
+  background:#fbbf24;
+}
+
+.dashboard-shell[data-theme="dark"] .calendar-holidays-display{
+  background:rgba(190,24,93,.12);
+  border-color:rgba(244,114,182,.28);
+}
+.dashboard-shell[data-theme="dark"] .calendar-holidays-display h4{
+  color:#f9a8d4;
+}
+.dashboard-shell[data-theme="dark"] .holiday-list-item{
+  color:#fecdd3;
+}
+.dashboard-shell[data-theme="dark"] .holiday-list-day{
+  background:#e11d48;
+}
+
+.calendar-legend{color:var(--color-text-muted);}
+
+.view-readonly-value{
+  background:var(--color-bg);
+  border-color:var(--color-border);
+  color:var(--color-text);
+}
+
+.dashboard-shell[data-theme="dark"] .holiday-modal-card{
+  border-top-color:#fbbf24;
+}
+
+.dashboard-shell[data-theme="dark"] .holiday-readonly-value{
+  background:rgba(202,138,4,.14);
+  border-color:rgba(251,191,36,.35);
+  color:#fde68a;
+}

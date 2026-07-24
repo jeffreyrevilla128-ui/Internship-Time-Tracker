@@ -1,0 +1,26 @@
+@import "tailwindcss";
+@import "./styles/OJTDashboard.css";
+@import "./styles/DiaryForm.css";
+@import "./styles/MetricHeader.css";
+@import "./styles/AttendanceCalendar.css";
+@import "./styles/HistoryLogs.css";
+@import "./styles/PunchCard.css";
+@import "./styles/Sidebar.css";
+@import "./styles/Authpage.css";
+
+/* Base Reset to standard plain white defaults */
+@layer base {
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: #ffffff;
+    color: #000000;
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+}
+
+
