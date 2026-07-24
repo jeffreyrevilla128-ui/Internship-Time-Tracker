@@ -6,7 +6,7 @@
 @import "./styles/HistoryLogs.css";
 @import "./styles/PunchCard.css";
 @import "./styles/Sidebar.css";
-@import "./styles/Authpage.css";
+@import "./styles/AuthPage.css";
 
 /* Base Reset to standard plain white defaults */
 @layer base {
