@@ -843,6 +843,73 @@
 }
 
 /* ================================================================= */
+/* SKELETON LOADER — reuses the real .history-table markup/classes    */
+/* (same <td data-label> cells, same mobile card breakpoint) so the   */
+/* placeholder rows inherit the exact desktop-table / mobile-card      */
+/* layout for free, and simply swap real content for shimmering bars. */
+/* ================================================================= */
+.skeleton-tr {
+  pointer-events: none;
+}
+
+.history-table tbody tr.skeleton-tr:hover {
+  background-color: transparent;
+}
+
+.skeleton-bar {
+  display: inline-block;
+  height: 0.8rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--color-border) 25%,
+    var(--color-bg) 37%,
+    var(--color-border) 63%
+  );
+  background-size: 400% 100%;
+  animation: skeletonShimmer 1.4s ease-in-out infinite;
+  vertical-align: middle;
+}
+
+.skeleton-bar + .skeleton-bar {
+  margin-top: 0.4rem;
+}
+
+/* Stack the two bars in each cell instead of them sitting inline. */
+.history-date-cell .skeleton-bar,
+td[data-label="Morning (AM)"] .skeleton-bar,
+td[data-label="Afternoon (PM)"] .skeleton-bar,
+.history-diary-cell .skeleton-bar {
+  display: block;
+}
+
+@keyframes skeletonShimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.skeleton-bar-date { width: 5.5rem; height: 0.95rem; }
+.skeleton-bar-day { width: 3rem; height: 0.7rem; }
+.skeleton-bar-time { width: 4.25rem; }
+.skeleton-bar-duration { width: 4.5rem; height: 1rem; }
+.skeleton-bar-diary-1 { width: 100%; }
+.skeleton-bar-diary-2 { width: 65%; }
+
+.skeleton-bar-btn {
+  flex: 1;
+  height: 1.75rem;
+  width: auto;
+  border-radius: 0.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-bar {
+    animation: none;
+    background: var(--color-border);
+  }
+}
+
+/* ================================================================= */
 /* RESPONSIVE MOBILE STACK RULES (INSIDE EXISTING MEDIA INQUIRY)    */
 /* ================================================================= */
 @media (max-width: 768px) {

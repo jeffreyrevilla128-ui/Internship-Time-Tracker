@@ -3,10 +3,24 @@ import { saveDiaryOnly, deleteDiaryEntry } from '../services/attendanceapi';
 
 const WORD_LIMIT = 1000;
 
+// How many placeholder entry cards the skeleton loader shows while
+// shiftState/logs are still being fetched by the parent.
+const SKELETON_ENTRY_COUNT = 3;
+
 function countWords(text) {
   const trimmed = text.trim();
   if (!trimmed) return 0;
   return trimmed.split(/\s+/).length;
+}
+
+// Truncates free text to at most `limit` words — shared by both the
+// "new entry" and "edit entry" textareas so the word-limit behavior
+// can't drift between the two.
+function clampToWordLimit(text, limit = WORD_LIMIT) {
+  const trimmed = text.trim();
+  if (!trimmed) return text;
+  const words = trimmed.split(/\s+/);
+  return words.length <= limit ? text : words.slice(0, limit).join(' ');
 }
 
 // Local calendar-day key (not UTC) so "today" matches what the user sees on their clock.
@@ -41,7 +55,52 @@ function getShiftStatus({ amIn, amOut, pmIn, pmOut } = {}) {
   return { label: 'No Punch Data', variant: 'none' };
 }
 
-export default function DiaryForm({ shiftState, setShiftState, logs = [] }) {
+// Shared by both the "new entry" and "edit entry" panels so the word
+// count + over-limit check isn't computed two separate ways.
+function useWordCount(text) {
+  return useMemo(() => {
+    const count = countWords(text);
+    return { count, overLimit: count > WORD_LIMIT };
+  }, [text]);
+}
+
+// Placeholder shown while shiftState/logs are still loading. Reuses the
+// real .diary-card / .diary-entry-item markup and classes so it inherits
+// the exact same layout — only the text content is swapped for
+// shimmering bars, the same approach used by HistoryLogs' skeleton.
+function DiarySkeleton() {
+  return (
+    <div className="diary-card" aria-hidden="true" aria-busy="true">
+      <div className="diary-header">
+        <div className="skeleton-header-text">
+          <span className="skeleton-bar skeleton-bar-title" />
+          <span className="skeleton-bar skeleton-bar-subtitle" />
+        </div>
+        <span className="skeleton-bar skeleton-bar-badge" />
+      </div>
+
+      <span className="skeleton-bar skeleton-bar-add-btn" />
+
+      <div className="diary-entries-list">
+        <span className="skeleton-bar skeleton-bar-label" />
+        {Array.from({ length: SKELETON_ENTRY_COUNT }).map((_, i) => (
+          <div className="diary-entry-item skeleton-entry" key={`diary-skeleton-${i}`}>
+            <div className="diary-entry-meta">
+              <span className="skeleton-bar skeleton-bar-date" />
+              <span className="skeleton-bar skeleton-bar-delete" />
+            </div>
+            <div className="diary-inline-container">
+              <span className="skeleton-bar skeleton-bar-status" />
+              <span className="skeleton-bar skeleton-bar-view" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function DiaryForm({ shiftState = {}, setShiftState, logs = [], isLoading = false }) {
   const entries = shiftState.diaryEntries || [];
   const locked = shiftState.isCompleted;
 
@@ -52,15 +111,13 @@ export default function DiaryForm({ shiftState, setShiftState, logs = [] }) {
   // --- "Create first entry for the active date" panel ---
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [newDraft, setNewDraft] = useState('');
-  const newWordCount = useMemo(() => countWords(newDraft), [newDraft]);
-  const newOverLimit = newWordCount > WORD_LIMIT;
+  const { count: newWordCount, overLimit: newOverLimit } = useWordCount(newDraft);
 
   // --- View / Edit modal (View is the entry point; Edit lives inside it) ---
   const [activeViewEntryId, setActiveViewEntryId] = useState(null);
   const [editingEntryId, setEditingEntryId] = useState(null);
   const [editDraft, setEditDraft] = useState('');
-  const editWordCount = useMemo(() => countWords(editDraft), [editDraft]);
-  const editOverLimit = editWordCount > WORD_LIMIT;
+  const { count: editWordCount, overLimit: editOverLimit } = useWordCount(editDraft);
 
   // --- Delete confirmation & toast feedback (mirrors HistoryLogs) ---
   const [activeDeleteEntryId, setActiveDeleteEntryId] = useState(null);
@@ -87,11 +144,14 @@ export default function DiaryForm({ shiftState, setShiftState, logs = [] }) {
     };
   }, [toastMessage]);
 
-  const handleNewDraftChange = (e) => {
-    const text = e.target.value;
-    const words = text.trim() === '' ? [] : text.trim().split(/\s+/);
-    setNewDraft(words.length <= WORD_LIMIT ? text : words.slice(0, WORD_LIMIT).join(' '));
+  // Shared by every save/update/delete outcome below so the
+  // "set message, reset fade state" pair isn't repeated six times.
+  const showToast = (text, type) => {
+    setToastMessage({ text, type });
+    setIsToastFading(false);
   };
+
+  const handleNewDraftChange = (e) => setNewDraft(clampToWordLimit(e.target.value));
 
   const handleCreateNew = async () => {
     const trimmedText = newDraft.trim();
@@ -111,12 +171,10 @@ export default function DiaryForm({ shiftState, setShiftState, logs = [] }) {
     setIsSavingEntry(true);
     try {
       await saveDiaryOnly(activeDateKey, trimmedText);
-      setToastMessage({ text: 'Diary entry saved successfully!', type: 'success' });
-      setIsToastFading(false);
+      showToast('Diary entry saved successfully!', 'success');
     } catch (err) {
       setShiftState(previous);
-      setToastMessage({ text: err.message || 'Failed to save diary entry.', type: 'danger' });
-      setIsToastFading(false);
+      showToast(err.message || 'Failed to save diary entry.', 'danger');
     } finally {
       setIsSavingEntry(false);
     }
@@ -146,11 +204,7 @@ export default function DiaryForm({ shiftState, setShiftState, logs = [] }) {
     setEditingEntryId(entry.id);
   };
 
-  const handleEditDraftChange = (e) => {
-    const text = e.target.value;
-    const words = text.trim() === '' ? [] : text.trim().split(/\s+/);
-    setEditDraft(words.length <= WORD_LIMIT ? text : words.slice(0, WORD_LIMIT).join(' '));
-  };
+  const handleEditDraftChange = (e) => setEditDraft(clampToWordLimit(e.target.value));
 
   // Always updates the existing entry in place — never creates a new card for the same date.
   // Saving closes the modal and confirms with a toast.
@@ -176,12 +230,10 @@ export default function DiaryForm({ shiftState, setShiftState, logs = [] }) {
     setIsSavingEntry(true);
     try {
       await saveDiaryOnly(targetEntry.date, trimmedText);
-      setToastMessage({ text: 'Diary entry updated successfully!', type: 'success' });
-      setIsToastFading(false);
+      showToast('Diary entry updated successfully!', 'success');
     } catch (err) {
       setShiftState(previous);
-      setToastMessage({ text: err.message || 'Failed to update diary entry.', type: 'danger' });
-      setIsToastFading(false);
+      showToast(err.message || 'Failed to update diary entry.', 'danger');
     } finally {
       setIsSavingEntry(false);
     }
@@ -219,12 +271,10 @@ export default function DiaryForm({ shiftState, setShiftState, logs = [] }) {
     setIsDeletingEntry(true);
     try {
       await deleteDiaryEntry(targetEntry.date);
-      setToastMessage({ text: 'Diary entry deleted successfully!', type: 'danger' });
-      setIsToastFading(false);
+      showToast('Diary entry deleted successfully!', 'danger');
     } catch (err) {
       setShiftState(previous);
-      setToastMessage({ text: err.message || 'Failed to delete diary entry.', type: 'danger' });
-      setIsToastFading(false);
+      showToast(err.message || 'Failed to delete diary entry.', 'danger');
     } finally {
       setIsDeletingEntry(false);
     }
@@ -238,6 +288,13 @@ export default function DiaryForm({ shiftState, setShiftState, logs = [] }) {
   const entryPendingDelete = entries.find(entry => entry.id === activeDeleteEntryId);
   const viewEntry = entries.find(entry => entry.id === activeViewEntryId);
   const isEditingInModal = !!viewEntry && editingEntryId === viewEntry.id;
+
+  // All hooks above have already run unconditionally by this point, so
+  // branching on isLoading here is safe — it only affects what gets
+  // rendered, not the hook call order.
+  if (isLoading) {
+    return <DiarySkeleton />;
+  }
 
   return (
     <div className="diary-card">

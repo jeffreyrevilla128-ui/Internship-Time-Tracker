@@ -418,6 +418,85 @@
 }
 
 /* ================================================================= */
+/* 6a. SKELETON LOADER — reuses the real .diary-card / .diary-header /*/
+/* .diary-entry-item markup and classes (same as the JSX) so the      */
+/* placeholder inherits the exact layout for free; only the text      */
+/* content is swapped for shimmering bars. Same shimmer approach as   */
+/* HistoryLogs.css's skeleton so loading states feel consistent       */
+/* app-wide.                                                          */
+/* ================================================================= */
+.skeleton-bar {
+  display: inline-block;
+  height: 0.8rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--color-border) 25%,
+    var(--color-bg) 37%,
+    var(--color-border) 63%
+  );
+  background-size: 400% 100%;
+  animation: skeletonShimmer 1.4s ease-in-out infinite;
+  vertical-align: middle;
+}
+
+@keyframes skeletonShimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.skeleton-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.skeleton-bar-title { width: 12rem; height: 1.1rem; }
+.skeleton-bar-subtitle { width: 16rem; max-width: 100%; height: 0.8rem; }
+
+.skeleton-bar-badge {
+  width: 4.5rem;
+  height: 1.6rem;
+  border-radius: 2rem;
+  align-self: flex-start;
+}
+
+@media (min-width: 480px) {
+  .skeleton-bar-badge { align-self: center; }
+}
+
+.skeleton-bar-add-btn {
+  display: block;
+  width: 100%;
+  height: 2.75rem;
+  border-radius: 0.625rem;
+  margin-bottom: 1rem;
+}
+
+.skeleton-bar-label {
+  display: block;
+  width: 7rem;
+  height: 0.8rem;
+  margin-bottom: 0.25rem;
+}
+
+.skeleton-entry {
+  pointer-events: none;
+}
+
+.skeleton-bar-date { width: 6rem; }
+.skeleton-bar-delete { width: 1.75rem; height: 1.75rem; border-radius: 9999px; }
+.skeleton-bar-status { width: 5rem; height: 1.5rem; border-radius: 999px; }
+.skeleton-bar-view { width: 4.5rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-bar {
+    animation: none;
+    background: var(--color-border);
+  }
+}
+
+/* ================================================================= */
 /* 7. TOAST NOTIFICATIONS (identical pattern to HistoryLogs.css so   */
 /*    success/delete feedback looks and behaves the same app-wide)   */
 /*    Semantic colors — stay fixed, dark-safe variants below.        */

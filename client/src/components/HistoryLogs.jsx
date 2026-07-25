@@ -7,6 +7,11 @@ import {
   saveDiaryOnly
 } from '../services/attendanceapi';
 
+// How many placeholder rows the skeleton loader shows while the first
+// fetch is in flight. Picked to roughly fill the card without looking
+// like an obviously-fake exact match to real row count.
+const SKELETON_ROW_COUNT = 5;
+
 export default function HistoryLogs({ logs, setLogs, startDate }) {
   // Search and Filter State Managers
   const [searchQuery, setSearchQuery] = useState("");
@@ -392,9 +397,55 @@ export default function HistoryLogs({ logs, setLogs, startDate }) {
 
         {/* DATA CONTAINER INTERACTIVE GRID */}
         {isLoadingLogs ? (
-          <div className="empty-state-fallback">
-            <div className="empty-state-icon">⏳</div>
-            <h4 className="empty-state-title">Loading attendance history…</h4>
+          <div className="table-responsive">
+            <table className="history-table" aria-hidden="true" aria-busy="true">
+              <thead>
+                <tr>
+                  <th>Timeline Info</th>
+                  <th>Morning (AM)</th>
+                  <th>Afternoon (PM)</th>
+                  <th>Total Duration</th>
+                  <th>Narrative Diary Summary</th>
+                  <th className="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from({ length: SKELETON_ROW_COUNT }).map((_, i) => (
+                  <tr key={`skeleton-${i}`} className="skeleton-tr">
+                    <td data-label="Timeline Info" className="history-date-cell">
+                      <span className="skeleton-bar skeleton-bar-date" />
+                      <span className="skeleton-bar skeleton-bar-day" />
+                    </td>
+
+                    <td data-label="Morning (AM)">
+                      <span className="skeleton-bar skeleton-bar-time" />
+                      <span className="skeleton-bar skeleton-bar-time" />
+                    </td>
+
+                    <td data-label="Afternoon (PM)">
+                      <span className="skeleton-bar skeleton-bar-time" />
+                      <span className="skeleton-bar skeleton-bar-time" />
+                    </td>
+
+                    <td data-label="Total Duration" className="history-hours-cell">
+                      <span className="skeleton-bar skeleton-bar-duration" />
+                    </td>
+
+                    <td data-label="Narrative Diary" className="history-diary-cell">
+                      <span className="skeleton-bar skeleton-bar-diary-1" />
+                      <span className="skeleton-bar skeleton-bar-diary-2" />
+                    </td>
+
+                    <td data-label="Actions" className="history-actions-cell">
+                      <div className="actions-btn-stack">
+                        <span className="skeleton-bar skeleton-bar-btn" />
+                        <span className="skeleton-bar skeleton-bar-btn" />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : loadError ? (
           <div className="empty-state-fallback">
