@@ -689,8 +689,8 @@ export default function HistoryLogs({ logs, setLogs, startDate }) {
               </div>
 
               <div className="modal-card-body modal-form-scrollable">
-                <div className="form-input-field">
-                  <label htmlFor="add-history-date">Date</label>
+                <div className="form-input-field date-field-card">
+                  <label htmlFor="add-history-date">📅 Date</label>
                   <input
                     id="add-history-date"
                     type="date"
