@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { saveDay, saveDiaryOnly, fetchDay } from '../services/attendanceapi';
-import useSpeechRecognition from '../hooks/useSpeechRecognition';
+import useSpeechRecognition from '../hooks/UsespeechRecognition';
 
 // Formats a raw Date object into a readable 12-hour string (e.g., "08:30 AM")
 const formatTo12Hour = (date) => {
