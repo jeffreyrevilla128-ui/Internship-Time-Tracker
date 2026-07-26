@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { saveDay, saveDiaryOnly, fetchDay } from '../services/attendanceapi';
+import useSpeechRecognition from '../hooks/useSpeechRecognition';
 
 // Formats a raw Date object into a readable 12-hour string (e.g., "08:30 AM")
 const formatTo12Hour = (date) => {
@@ -96,6 +97,16 @@ const formatDateKeyLabel = (dateKey) => {
   const [y, m, d] = dateKey.split('-').map(Number);
   return new Date(y, m - 1, d).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
 };
+
+// Minimal inline mic icon (kept dependency-free, no icon library import needed)
+function MicIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M19 11a7 7 0 0 1-14 0M12 18v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 // Small reusable chip so Time In / Time Out always read as two distinct facts, never one merged line
 function TimeChip({ kind, label, value }) {
@@ -196,6 +207,22 @@ export default function PunchCard({ shiftState, setShiftState }) {
 
   // --- Draft text for the "Daily Diary" quick-entry modal ---
   const [diaryDraft, setDiaryDraft] = useState('');
+
+  // --- Voice dictation for the diary textarea ---
+  const {
+    transcript: speechTranscript,
+    interimTranscript,
+    isListening: isMicListening,
+    isSupported: isMicSupported,
+    error: micError,
+    startListening,
+    stopListening,
+    resetTranscript,
+  } = useSpeechRecognition({ continuous: true, lang: 'en-US' });
+
+  // Diary text as it was right before the current dictation session started,
+  // so recognized speech is appended to it rather than overwriting it.
+  const diaryBaseTextRef = useRef('');
 
   // --- Whether an already-recorded time is currently being edited ---
   const [editingIn, setEditingIn] = useState(false);
@@ -463,16 +490,45 @@ export default function PunchCard({ shiftState, setShiftState }) {
     setEditingOut(false);
   };
 
-  const handleDiaryDraftChange = (e) => {
-    const text = e.target.value;
+  // Clamp to DIARY_WORD_LIMIT without truncating mid-word. Shared by manual
+  // typing and by dictated speech so both respect the same cap.
+  const clampToDiaryWordLimit = (text) => {
     const words = text.trim() === '' ? [] : text.trim().split(/\s+/);
-    if (words.length <= DIARY_WORD_LIMIT) {
-      setDiaryDraft(text);
-    } else {
-      // Prevent typing past the limit rather than silently truncating mid-word
-      setDiaryDraft(words.slice(0, DIARY_WORD_LIMIT).join(' '));
-    }
+    return words.length <= DIARY_WORD_LIMIT ? text : words.slice(0, DIARY_WORD_LIMIT).join(' ');
   };
+
+  const handleDiaryDraftChange = (e) => {
+    setDiaryDraft(clampToDiaryWordLimit(e.target.value));
+  };
+
+  // Start/stop the mic. On start, snapshot whatever's already in the
+  // textarea so recognized speech is appended to it, not over it.
+  const handleToggleMic = () => {
+    if (isMicListening) {
+      stopListening();
+      return;
+    }
+    diaryBaseTextRef.current = diaryDraft;
+    resetTranscript();
+    startListening();
+  };
+
+  // Merge each new finalized speech chunk onto the pre-dictation base text.
+  useEffect(() => {
+    if (!speechTranscript) return;
+    const base = diaryBaseTextRef.current;
+    const merged = base ? `${base} ${speechTranscript}` : speechTranscript;
+    setDiaryDraft(clampToDiaryWordLimit(merged));
+  }, [speechTranscript]);
+
+  // Release the mic and clear any in-progress dictation whenever the diary
+  // modal isn't the active view (closed, or a shift modal opened instead).
+  useEffect(() => {
+    if (modalView !== 'diary') {
+      stopListening();
+      resetTranscript();
+    }
+  }, [modalView, stopListening, resetTranscript]);
 
   const saveDiaryEntry = async () => {
     const trimmedText = diaryDraft.trim();
@@ -702,13 +758,34 @@ export default function PunchCard({ shiftState, setShiftState }) {
                       ? `Editing the saved entry for ${activeDateLabel}. Saving will update it in place.`
                       : `Write about tasks and accomplishments for ${activeDateLabel}.`}
                   </p>
-                  <textarea
-                    autoFocus
-                    value={diaryDraft}
-                    onChange={handleDiaryDraftChange}
-                    placeholder="Describe your output..."
-                    className="diary-quick-textarea"
-                  />
+                  <div className="diary-textarea-wrap">
+                    <textarea
+                      autoFocus
+                      value={diaryDraft}
+                      onChange={handleDiaryDraftChange}
+                      placeholder="Describe your output..."
+                      className="diary-quick-textarea"
+                    />
+                    {isMicSupported && (
+                      <button
+                        type="button"
+                        className={`diary-mic-btn${isMicListening ? ' diary-mic-btn-active' : ''}`}
+                        onClick={handleToggleMic}
+                        aria-label={isMicListening ? 'Stop voice dictation' : 'Start voice dictation'}
+                        title={isMicListening ? 'Stop voice dictation' : 'Start voice dictation'}
+                      >
+                        <MicIcon />
+                      </button>
+                    )}
+                  </div>
+                  {isMicListening && (
+                    <p className="diary-mic-status">
+                      🎙️ Listening… {interimTranscript}
+                    </p>
+                  )}
+                  {micError && (
+                    <p className="diary-mic-error" role="alert">⚠️ {micError}</p>
+                  )}
                   <div className="diary-quick-footer">
                     <span className="diary-quick-word-count">
                       {diaryWordCount} / {DIARY_WORD_LIMIT} words
