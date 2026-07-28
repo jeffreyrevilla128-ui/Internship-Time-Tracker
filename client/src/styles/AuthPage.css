@@ -36,25 +36,6 @@
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
 }
 
-.auth-shell[data-theme="dark"] {
-  /* Dark mode: Deep navy with cyan accents */
-  --color-bg: #0f172a;
-  --color-surface: #1a2540;
-  --color-border: #2d3e52;
-  --color-text: #f1f5f9;
-  --color-text-muted: #cbd5e1;
-
-  --color-accent: #06b6d4;
-  --color-accent-light: #22d3ee;
-  --color-accent-soft: rgb(6 182 212 / 0.12);
-
-  --color-success-soft: rgb(16 185 129 / 0.12);
-  --color-danger-soft: rgb(239 68 68 / 0.12);
-
-  --shadow-card: 0 20px 40px -12px rgb(0 0 0 / 0.4), 0 8px 16px -8px rgb(0 0 0 / 0.2);
-  --shadow-hover: 0 24px 48px -12px rgb(0 0 0 / 0.5);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .auth-shell * {
     transition-duration: 0.01ms !important;
@@ -173,7 +154,64 @@
   letter-spacing: 0.05em;
 }
 
-.auth-brand-logo-icon { font-size: 1.25rem; }
+.auth-brand-logo-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, #ffffff 55%, rgb(8 145 178 / 0.18) 100%);
+  box-shadow: 0 6px 14px -6px rgb(8 145 178 / 0.45);
+}
+
+/* ================================================================= */
+/* 2b. LOGO CLICK "SPIN" ANIMATION — shared by the desktop brand icon */
+/* (.auth-brand-logo-icon) and the mobile hero icon                   */
+/* (.auth-mobile-hero-logo-icon). Both get cursor/interaction styling */
+/* here, and the animation itself is defined once and applied via     */
+/* .auth-logo-spin, which the component toggles on click/keypress.    */
+/* ================================================================= */
+.auth-brand-logo-icon,
+.auth-mobile-hero-logo-icon {
+  cursor: pointer;
+  user-select: none;
+  transform-origin: 50% 50%;
+  will-change: transform;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.auth-logo-spin {
+  animation: authLogoSpin 0.9s cubic-bezier(0.45, 0, 0.2, 1);
+}
+
+/* Zoom in slightly, ease back toward normal, dip to a bit smaller than
+   original (the "bounce" bottom), then immediately spin 360° clockwise
+   while scaling back up to normal size — settling cleanly with no
+   overshoot. Kept to one element/one animation (no overlap) and
+   re-triggerable because the component removes+re-adds the class on
+   every click (forcing a reflow in between) rather than relying on
+   CSS alone. */
+@keyframes authLogoSpin {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  16% {
+    transform: scale(1.18) rotate(0deg);
+  }
+  32% {
+    transform: scale(1) rotate(0deg);
+  }
+  46% {
+    transform: scale(0.86) rotate(0deg);
+  }
+  70% {
+    transform: scale(0.93) rotate(180deg);
+  }
+  100% {
+    transform: scale(1) rotate(360deg);
+  }
+}
 
 .auth-brand-center {
   display: flex;
@@ -220,6 +258,13 @@
 }
 
 @media (min-width: 900px) {
+  /* Left corners get the same pronounced 2.5rem radius used for the
+     mobile bottom sheet's top corners, so the desktop card echoes that
+     rounded-corner treatment instead of matching all four corners. */
+  .auth-card {
+    border-radius: 2.5rem calc(var(--radius-lg) + 0.25rem) calc(var(--radius-lg) + 0.25rem) 2.5rem;
+  }
+
   .auth-form-panel {
     padding: 3rem;
     /* This panel owns its own scrollbar. When the Register form is
@@ -239,58 +284,6 @@
     margin-bottom: auto;
   }
 }
-
-.auth-theme-toggle {
-  position: absolute;
-  top: 1.25rem;
-  right: 1.25rem;
-  width: 2.75rem;
-  height: 1.5rem;
-  border-radius: 9999px;
-  background-color: var(--color-border);
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  transition: background-color var(--duration-standard) var(--ease-standard);
-}
-
-.auth-theme-toggle[aria-checked="true"] {
-  background-color: var(--color-accent);
-}
-
-.auth-theme-toggle-knob {
-  position: absolute;
-  top: 0.15rem;
-  left: 0.15rem;
-  width: 1.2rem;
-  height: 1.2rem;
-  border-radius: 50%;
-  background-color: #ffffff;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
-  transition: transform var(--duration-standard) var(--ease-standard);
-}
-
-.auth-theme-toggle[aria-checked="true"] .auth-theme-toggle-knob {
-  transform: translateX(1.25rem);
-}
-
-.auth-theme-toggle-icon {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: opacity var(--duration-standard) var(--ease-standard),
-              transform var(--duration-standard) var(--ease-standard);
-}
-
-.auth-theme-toggle-icon svg { width: 0.8rem; height: 0.8rem; }
-
-.auth-theme-toggle-icon-sun { color: #f59e0b; opacity: 1; transform: rotate(0deg) scale(1); }
-.auth-theme-toggle-icon-moon { color: #475569; opacity: 0; transform: rotate(90deg) scale(0.4); }
-
-.auth-theme-toggle[aria-checked="true"] .auth-theme-toggle-icon-sun { opacity: 0; transform: rotate(-90deg) scale(0.4); }
-.auth-theme-toggle[aria-checked="true"] .auth-theme-toggle-icon-moon { opacity: 1; transform: rotate(0deg) scale(1); }
 
 /* ================================================================= */
 /* 4. AUTH CARD                                                      */
@@ -315,19 +308,154 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-.auth-card-mobile-logo {
+/* ================================================================= */
+/* 4b. MOBILE-ONLY HERO (below 900px)                                */
+/* Colors/shape follow the reference mockup's layout (diagonal        */
+/* gradient, subtle line texture, white rounded badge, big rounded    */
+/* card overlap), but recolored to the app's navy → teal palette so   */
+/* it matches the desktop .auth-brand-panel instead of purple.        */
+/* Hidden entirely at 900px+ — desktop keeps .auth-brand-panel as-is. */
+/* ================================================================= */
+.auth-mobile-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 3rem 1.75rem 4.5rem;
+  text-align: center;
+  color: #ffffff;
+  background-image:
+    repeating-linear-gradient(115deg, rgb(255 255 255 / 0.07) 0px, rgb(255 255 255 / 0.07) 1px, transparent 1px, transparent 9px),
+    linear-gradient(135deg, #0f172a 0%, #0e4a5c 55%, #0891b2 100%);
+}
+
+/* The reference mockup used an abstract white badge here; we removed it
+   so the clock icon in .auth-mobile-hero-logo-icon is the only icon,
+   sized up to read as the hero's visual anchor instead. */
+.auth-mobile-hero::after {
+  content: '';
+  position: absolute;
+  inset: auto auto -55% -25%;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(255 255 255 / 0.12), transparent 70%);
+  pointer-events: none;
+}
+
+.auth-mobile-hero-content,
+.auth-mobile-get-started-btn {
+  position: relative;
+  z-index: 1;
+}
+
+.auth-mobile-hero-content {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 1rem;
+}
+
+.auth-mobile-hero-logo,
+.auth-mobile-hero-title,
+.auth-mobile-hero-tagline {
+  position: relative;
+  z-index: 1;
+}
+
+.auth-mobile-hero-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.875rem;
+  margin: 0 0 1.75rem;
+  font-size: 0.9375rem;
   font-weight: 700;
   letter-spacing: 0.05em;
+}
+
+/* The icon is now the hero's visual anchor (it replaces the old white
+   badge pseudo-element), so it gets its own rounded "chip" background
+   and sits in normal document flow above the wordmark — nothing below
+   it can overlap since it's no longer absolutely positioned. */
+.auth-mobile-hero-logo-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4.75rem;
+  height: 4.75rem;
+  border-radius: 1.5rem;
+  background: linear-gradient(135deg, #ffffff 55%, rgb(8 145 178 / 0.18) 100%);
+  box-shadow: 0 12px 24px -8px rgb(8 145 178 / 0.45);
+  font-size: 2.25rem;
+  line-height: 1;
+}
+
+.auth-mobile-hero-title {
+  margin: 0 0 0.625rem;
+  font-size: 1.625rem;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.auth-mobile-hero-tagline {
+  margin: 0 auto;
+  max-width: 30ch;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: rgb(255 255 255 / 0.85);
+}
+
+.auth-mobile-get-started-btn {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto;
+  padding: 1.05rem 1.5rem;
+  border: none;
+  border-radius: 9999px;
+  background-color: #ffffff;
   color: var(--color-accent);
-  margin-bottom: 1.5rem;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  box-shadow: 0 14px 32px -10px rgb(0 0 0 / 0.4);
+  transition: transform var(--duration-fast) var(--ease-standard),
+              box-shadow var(--duration-fast) var(--ease-standard);
+}
+
+.auth-mobile-get-started-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 36px -10px rgb(0 0 0 / 0.45);
+}
+
+.auth-mobile-get-started-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 8px 20px -8px rgb(0 0 0 / 0.35);
 }
 
 @media (min-width: 900px) {
-  .auth-card-mobile-logo { display: none; }
+  .auth-mobile-hero { display: none; }
+}
+
+/* Compact prompt shown only inside the mobile sheet — the hero above
+   it already carries the full "Welcome to OJT Tracker" message on
+   small screens, so .auth-card-header's fuller copy is hidden there
+   (see section 8) and this short heading takes its place. */
+.auth-mobile-sheet-heading {
+  display: none;
+  margin: 0 0 1.25rem;
+  font-size: 1.5rem;
+  font-weight: 800;
+  /* Uses the shared teal accent token so it matches the hero's
+     navy/teal gradient family (and stays correct in dark mode too),
+     instead of the old hardcoded purple. */
+  color: var(--color-accent);
+  letter-spacing: -0.01em;
+}
+
+@media (max-width: 899px) {
+  .auth-mobile-sheet-heading { display: block; }
 }
 
 .auth-card-header { margin-bottom: 1.5rem; }
@@ -358,7 +486,7 @@
 }
 
 /* ================================================================= */
-/* 6. NOTICE BANNER (submit success/error)                           */
+/* 5. NOTICE BANNER (submit success/error)                           */
 /* ================================================================= */
 .auth-notice {
   display: flex;
@@ -392,283 +520,8 @@
 }
 
 /* ================================================================= */
-/* 7. FORM + FIELDS                                                  */
+/* 6. BUTTONS                                                        */
 /* ================================================================= */
-.auth-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.125rem;
-}
-
-.auth-form-anim {
-  animation: authFormIn 0.3s var(--ease-standard);
-}
-
-@keyframes authFormIn {
-  from { opacity: 0; transform: translateX(6px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-.auth-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-}
-
-.auth-field label {
-  font-size: 0.8125rem;
-  font-weight: 700;
-  color: var(--color-text);
-}
-
-.auth-field-label-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.auth-input-group {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.auth-input-icon {
-  position: absolute;
-  left: 0.875rem;
-  display: flex;
-  color: var(--color-text-muted);
-  pointer-events: none;
-}
-
-.auth-input {
-  width: 100%;
-  padding: 0.6875rem 0.875rem 0.6875rem 2.5rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background-color: var(--color-bg);
-  color: var(--color-text);
-  font-size: 0.9375rem;
-  font-family: inherit;
-  transition: border-color var(--duration-fast) var(--ease-standard),
-              box-shadow var(--duration-fast) var(--ease-standard);
-}
-
-.auth-input::placeholder { color: var(--color-text-muted); }
-
-.auth-input:focus {
-  outline: none;
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px var(--color-accent-soft);
-}
-
-.auth-input-error {
-  border-color: var(--color-danger);
-}
-
-.auth-input-error:focus {
-  box-shadow: 0 0 0 3px var(--color-danger-soft);
-}
-
-/* Password fields reserve right-side padding for the eye toggle (and,
-   on confirm-password, an extra slot for the inline match checkmark). */
-input[type="password"].auth-input,
-input[type="text"].auth-input[id*="assword"] {
-  padding-right: 2.5rem;
-}
-
-.auth-input-action-btn {
-  position: absolute;
-  right: 0.625rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  padding: 0.25rem;
-  border-radius: var(--radius-sm);
-  transition: color var(--duration-fast) var(--ease-standard);
-}
-
-.auth-input-action-btn:hover { color: var(--color-text); }
-
-.auth-input-status-icon {
-  position: absolute;
-  right: 2.5rem;
-  display: flex;
-  animation: authStatusIn 0.2s var(--ease-standard);
-}
-
-@keyframes authStatusIn {
-  from { opacity: 0; transform: scale(0.6); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-.auth-input-status-ok { color: var(--color-success); }
-
-.auth-field-error {
-  display: flex;
-  align-items: center;
-  gap: 0.3125rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--color-danger);
-  animation: authFieldMsgIn 0.2s var(--ease-standard);
-}
-
-.auth-field-hint {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--color-text-muted);
-  font-style: italic;
-  animation: authFieldMsgIn 0.2s var(--ease-standard);
-}
-
-@keyframes authFieldMsgIn {
-  from { opacity: 0; transform: translateY(-2px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.auth-inline-link {
-  background: none;
-  border: none;
-  padding: 0;
-  color: var(--color-accent);
-  font-size: 0.75rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-.auth-inline-link:hover { text-decoration: underline; }
-
-.auth-inline-link-strong { font-size: 0.8125rem; }
-
-/* ================================================================= */
-/* 8. LIVE PASSWORD REQUIREMENT CHECKLIST                            */
-/* Collapsed (max-height: 0) until the password field is focused or   */
-/* has content, then expands — each item's icon cross-fades between   */
-/* an empty ring and a filled checkmark as its requirement is met,    */
-/* the same "morph" language used by the dashboard's theme toggle.    */
-/* ================================================================= */
-.auth-checklist {
-  list-style: none;
-  margin: 0;
-  padding: 0 0.125rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  max-height: 0;
-  opacity: 0;
-  overflow: hidden;
-  transition: max-height var(--duration-standard) var(--ease-standard),
-              opacity var(--duration-standard) var(--ease-standard),
-              margin-top var(--duration-standard) var(--ease-standard);
-}
-
-.auth-checklist-visible {
-  max-height: 12rem;
-  opacity: 1;
-  margin-top: 0.375rem;
-}
-
-.auth-checklist-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--color-text-muted);
-  transition: color var(--duration-fast) var(--ease-standard);
-}
-
-.auth-checklist-item-passed { color: var(--color-success); }
-
-.auth-checklist-icon {
-  position: relative;
-  width: 15px;
-  height: 15px;
-  flex-shrink: 0;
-}
-
-.auth-checklist-icon-layer {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  transition: opacity var(--duration-fast) var(--ease-standard),
-              transform var(--duration-fast) var(--ease-standard);
-}
-
-.auth-checklist-icon-off { color: var(--color-text-muted); opacity: 1; transform: scale(1); }
-.auth-checklist-icon-on { color: var(--color-success); opacity: 0; transform: scale(0.5); }
-
-.auth-checklist-item-passed .auth-checklist-icon-off { opacity: 0; transform: scale(0.5); }
-.auth-checklist-item-passed .auth-checklist-icon-on { opacity: 1; transform: scale(1); }
-
-/* ================================================================= */
-/* 9. BUTTONS                                                        */
-/* ================================================================= */
-.auth-submit-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  width: 100%;
-  padding: 0.9375rem 1.25rem;
-  margin-top: 0.5rem;
-  background-color: var(--color-accent);
-  color: #ffffff;
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: 0.9375rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  transition: all var(--duration-standard) var(--ease-standard);
-  box-shadow: 0 4px 12px -2px rgb(8 145 178 / 0.25);
-}
-
-.auth-submit-btn:hover:not(:disabled) { 
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px -4px rgb(8 145 178 / 0.35);
-  filter: brightness(1.08);
-}
-.auth-submit-btn:active:not(:disabled) { transform: translateY(-1px); }
-
-.auth-submit-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.auth-switch-line {
-  margin: 0.25rem 0 0 0;
-  text-align: center;
-  font-size: 0.8125rem;
-  color: var(--color-text-muted);
-}
-
-.auth-divider {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin: 0.125rem 0;
-  color: var(--color-text-muted);
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.auth-divider::before,
-.auth-divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background-color: var(--color-border);
-}
-
 .auth-google-btn {
   display: inline-flex;
   align-items: center;
@@ -703,7 +556,7 @@ input[type="text"].auth-input[id*="assword"] {
 }
 
 /* ================================================================= */
-/* 9b. GOOGLE-ONLY AUTH CARD — single-action layout                  */
+/* 7. GOOGLE-ONLY AUTH CARD — single-action layout                   */
 /* ================================================================= */
 .auth-card-google-only {
   display: flex;
@@ -741,6 +594,19 @@ input[type="text"].auth-input[id*="assword"] {
   filter: brightness(1.05);
 }
 
+/* Touch devices don't fire :hover, so tapping the button on mobile
+   previously gave no visual feedback at all. This mirrors the exact
+   desktop hover treatment above on :active instead, so tapping the
+   button feels the same as hovering it on desktop. */
+@media (hover: none) {
+  .auth-google-btn-primary:active:not(:disabled) {
+    border-color: var(--color-accent-light);
+    box-shadow: 0 16px 40px -8px rgb(8 145 178 / 0.4);
+    transform: translateY(-2px);
+    filter: brightness(1.05);
+  }
+}
+
 .auth-terms-note {
   margin: 1.25rem auto 0;
   max-width: 360px;
@@ -750,17 +616,98 @@ input[type="text"].auth-input[id*="assword"] {
 }
 
 /* ================================================================= */
-/* 10. RESPONSIVE FINE-TUNING                                        */
+/* 8. MOBILE ONBOARDING FLOW (below 900px)                           */
+/* Two stages within .auth-form-panel, which becomes a fixed,         */
+/* viewport-locked stage so the two layers can be positioned exactly: */
+/*   1. .auth-mobile-hero fills the whole screen with branding and    */
+/*      the "Get Started" CTA — the ONLY thing visible on first load. */
+/*   2. Tapping it adds .auth-sheet-open to .auth-form-panel, which   */
+/*      slides .auth-card up from translateY(100%) to its resting     */
+/*      position as a bottom sheet, overlapping the hero so its top   */
+/*      portion (logo/headline) stays visible behind it — matching    */
+/*      the reference's slide-up flow, recolored to the app's teal    */
+/*      theme instead of purple.                                      */
+/* Everything here is scoped to max-width: 899px, so the shared base  */
+/* rules — .auth-form-panel (section 3) and .auth-card (section 4) —  */
+/* still serve the 900px+ desktop layout completely unchanged.        */
 /* ================================================================= */
-@media (max-width: 420px) {
-  .auth-card {
-    padding: 1.5rem 1.25rem;
-    border-radius: var(--radius-md);
+@media (max-width: 899px) {
+  .auth-shell {
+    height: 100vh;
+    min-height: 100vh;
+    overflow: hidden;
   }
+
+  .auth-form-panel {
+    position: relative;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  /* --- Stage 1: full-screen hero with the "Get Started" CTA --------- */
+  .auth-mobile-hero {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 4.5rem 1.75rem 3rem;
+  }
+
+  /* --- Stage 2: bottom sheet, off-screen until "Get Started" is tapped */
+  .auth-card {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2;
+    width: 100%;
+    max-width: none;
+    height: 50%;
+    max-height: 50%;
+    margin: 0;
+    border: none;
+    border-radius: 2.5rem 2.5rem 0 0;
+    box-shadow: 0 -8px 24px -12px rgb(15 23 42 / 0.15);
+    padding: 2.25rem 1.5rem 2.5rem;
+    backdrop-filter: none;
+    animation: none;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transform: translateY(100%);
+    pointer-events: none;
+    transition: transform 0.45s var(--ease-standard);
+  }
+
+  .auth-form-panel.auth-sheet-open .auth-card {
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  /* The hero above already shows the full welcome message on mobile,
+     so the fuller .auth-card-header copy is redundant here — the
+     compact .auth-mobile-sheet-heading (section 4b) takes its place. */
+  .auth-card-header { display: none; }
+
+  /* Center the sign-in content within the sheet's available height. */
+  .auth-card-google-only {
+    justify-content: center;
+    height: 100%;
+  }
+
+  /* Mobile CTA inside the sheet inherits the shared teal
+     .auth-google-btn-primary styling (section 7) unchanged, so it
+     matches the hero's navy/teal palette on small screens too. */
 }
 
-@media (min-width: 640px) and (max-width: 899px) {
-  .auth-card {
-    max-width: 460px;
-  }
+@media (max-width: 380px) {
+  .auth-card { padding: 1.75rem 1.25rem 2rem; }
 }

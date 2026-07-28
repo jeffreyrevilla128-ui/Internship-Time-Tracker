@@ -13,8 +13,6 @@ import { useGoogleLogin } from '@react-oauth/google';
    No separate "register" flow is needed on the frontend anymore.
    ===================================================================== */
 
-const THEME_STORAGE_KEY = 'ojt-dashboard-theme';
-
 // Point this at your Express server. Adjust the port if yours differs.
 const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
 
@@ -47,35 +45,47 @@ const IconGoogle = (props) => (
 );
 
 export default function AuthPage({ onLogin, onGoogleAuth }) {
-  // --- Theme (shared with the dashboard, so it persists across the flow) --
-  const [theme, setTheme] = useState(() => {
-    try {
-      const saved = localStorage.getItem(THEME_STORAGE_KEY);
-      return saved === 'dark' ? 'dark' : 'light';
-    } catch {
-      return 'light';
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(THEME_STORAGE_KEY, theme);
-    } catch {
-      // Storage can fail (private browsing, quota, etc.) — theme still
-      // applies for the current session even if it can't be persisted.
-    }
-  }, [theme]);
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  // --- Mobile onboarding flow --------------------------------------------
+  // Below 900px the page starts on a full-screen hero (branding +
+  // "Get Started"). Tapping it reveals the existing Google-only auth
+  // card as a bottom sheet that slides up over the hero. Desktop is
+  // unaffected — .auth-mobile-hero is display:none there, so this state
+  // has no visual effect above 900px.
+  const [showAuthSheet, setShowAuthSheet] = useState(false);
 
   // --- Shared submit/notice state -------------------------------------------
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [notice, setNotice] = useState(null); // { type: 'success' | 'error', message }
   const noticeTimerRef = useRef(null);
+
+  // --- Logo click "spin" animation ------------------------------------------
+  // Two separate icon instances exist (desktop brand panel + mobile hero),
+  // each gets its own ref so a click on one never affects the other.
+  // Triggering via ref + classList (rather than React state) means a click
+  // mid-animation can restart it immediately: remove the class, force a
+  // reflow, then re-add it — no queued/overlapping animations, no jitter.
+  const brandLogoIconRef = useRef(null);
+  const mobileLogoIconRef = useRef(null);
+
+  const spinLogo = (ref) => {
+    const el = ref.current;
+    if (!el) return;
+    el.classList.remove('auth-logo-spin');
+    // eslint-disable-next-line no-void
+    void el.offsetWidth; // force reflow so the animation restarts from 0%
+    el.classList.add('auth-logo-spin');
+  };
+
+  const handleLogoKeyDown = (ref) => (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      spinLogo(ref);
+    }
+  };
+
+  const clearLogoSpin = (e) => {
+    e.currentTarget.classList.remove('auth-logo-spin');
+  };
 
   const showNotice = (type, message, duration = 4000) => {
     setNotice({ type, message });
@@ -131,14 +141,28 @@ export default function AuthPage({ onLogin, onGoogleAuth }) {
   });
 
   return (
-    <div className="auth-shell" data-theme={theme}>
+    <div className="auth-shell">
       {/* ============================================================= */}
       {/* BRANDING PANEL — hidden below 900px                            */}
       {/* ============================================================= */}
       <aside className="auth-brand-panel" aria-hidden="true">
         <div className="auth-brand-top">
           <div className="auth-brand-logo">
-            <span className="auth-brand-logo-icon">⏱️</span>
+            <span
+              className="auth-brand-logo-icon"
+              ref={brandLogoIconRef}
+              role="button"
+              tabIndex={0}
+              aria-label="OJT Tracker logo"
+              onClick={() => spinLogo(brandLogoIconRef)}
+              onKeyDown={handleLogoKeyDown(brandLogoIconRef)}
+              onAnimationEnd={clearLogoSpin}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" stroke="#0891b2" strokeWidth="1.8" />
+                <path d="M12 7v5.2l3.4 2" stroke="#0891b2" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
             <span>OJT TRACKER</span>
           </div>
         </div>
@@ -150,45 +174,67 @@ export default function AuthPage({ onLogin, onGoogleAuth }) {
           </p>
         </div>
 
-        <p className="auth-brand-footer">Trusted by thousands of interns worldwide.</p>
+        <p className="auth-brand-footer">Built to help you track your OJT journey, one log at a time.</p>
       </aside>
 
       {/* ============================================================= */}
       {/* FORM PANEL                                                     */}
       {/* ============================================================= */}
-      <main className="auth-form-panel">
-        <button
-          type="button"
-          className="auth-theme-toggle"
-          role="switch"
-          aria-checked={theme === 'dark'}
-          aria-label="Toggle dark mode"
-          onClick={toggleTheme}
-        >
-          <span className="auth-theme-toggle-knob">
-            <span className="auth-theme-toggle-icon auth-theme-toggle-icon-sun" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="4.5" fill="currentColor" />
-                <g stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <line x1="12" y1="1.5" x2="12" y2="3.5" /><line x1="12" y1="20.5" x2="12" y2="22.5" />
-                  <line x1="4.4" y1="4.4" x2="5.8" y2="5.8" /><line x1="18.2" y1="18.2" x2="19.6" y2="19.6" />
-                  <line x1="1.5" y1="12" x2="3.5" y2="12" /><line x1="20.5" y1="12" x2="22.5" y2="12" />
-                  <line x1="4.4" y1="19.6" x2="5.8" y2="18.2" /><line x1="18.2" y1="5.8" x2="19.6" y2="4.4" />
-                </g>
-              </svg>
-            </span>
-            <span className="auth-theme-toggle-icon auth-theme-toggle-icon-moon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20.5 13.4A8.5 8.5 0 1 1 10.6 3.5a7 7 0 0 0 9.9 9.9Z" fill="currentColor" />
-              </svg>
-            </span>
-          </span>
-        </button>
+      <main className={`auth-form-panel${showAuthSheet ? ' auth-sheet-open' : ''}`}>
+        {/* MOBILE-ONLY HERO — shown below 900px in place of the desktop
+            brand panel (which is hidden at that width). display:none at
+            min-width:900px, same pattern already used by
+            .auth-brand-panel / .auth-card-mobile-logo above.
 
-        <div className="auth-card auth-card-google-only">
-          <div className="auth-card-mobile-logo" aria-hidden="true">
-            <span>⏱️</span><span>OJT TRACKER</span>
+            Two-stage onboarding flow (mobile only):
+              1. Hero fills the screen with branding + "Get Started".
+              2. Tapping it sets showAuthSheet=true, which slides the
+                 existing Google-only auth card up from the bottom as
+                 an overlay, leaving the top of the hero visible behind
+                 it (see .auth-sheet-open rules in the CSS). */}
+        <div className="auth-mobile-hero">
+          <div className="auth-mobile-hero-content">
+            <div className="auth-mobile-hero-logo">
+              <span
+                className="auth-mobile-hero-logo-icon"
+                ref={mobileLogoIconRef}
+                role="button"
+                tabIndex={0}
+                aria-label="OJT Tracker logo"
+                onClick={() => spinLogo(mobileLogoIconRef)}
+                onKeyDown={handleLogoKeyDown(mobileLogoIconRef)}
+                onAnimationEnd={clearLogoSpin}
+              >
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" stroke="#0891b2" strokeWidth="1.8" />
+                  <path d="M12 7v5.2l3.4 2" stroke="#0891b2" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+              <span>OJT TRACKER</span>
+            </div>
+            <h1 className="auth-mobile-hero-title">Your OJT journey starts here.</h1>
+            <p className="auth-mobile-hero-tagline">
+              Track your progress, log your hours, and stay organized throughout your internship.
+            </p>
           </div>
+
+          {!showAuthSheet && (
+            <button
+              type="button"
+              className="auth-mobile-get-started-btn"
+              onClick={() => setShowAuthSheet(true)}
+            >
+              Get Started
+            </button>
+          )}
+        </div>
+
+        <div className="auth-card auth-card-google-only" aria-hidden={!showAuthSheet}>
+          {/* Mobile-only compact heading — the hero above already carries
+              the full welcome message on small screens, so this sheet
+              just needs a short prompt instead of repeating it. Hidden
+              on desktop, where .auth-card-header below still renders. */}
+          <h2 className="auth-mobile-sheet-heading">Sign in to continue</h2>
 
           <div className="auth-card-header">
             <span className="auth-card-eyebrow">Getting Started</span>
