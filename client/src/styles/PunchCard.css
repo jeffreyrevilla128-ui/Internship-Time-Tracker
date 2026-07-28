@@ -429,6 +429,46 @@
   color: #f87171;
 }
 
+.diary-grammar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.diary-grammar-btn {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.diary-grammar-btn:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.diary-grammar-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.diary-grammar-undo {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 .diary-quick-footer {
   display: flex;
   align-items: center;

@@ -51,15 +51,18 @@ function formatFinalChunk(text) {
   return applyCapitalizationRules(sentenced);
 }
 
-// insertPeriod: true when a long pause preceded this chunk, so a sentence
-// boundary is assumed if the existing text doesn't already end in punctuation.
-function appendChunk(existing, chunk, insertPeriod = false) {
+function appendChunk(existing, chunk) {
   if (!chunk) return existing;
   if (!existing) return chunk;
-  if (existing.endsWith('\n')) return existing + chunk;
-  const alreadyPunctuated = /[.!?]\s*$/.test(existing);
-  if (insertPeriod && !alreadyPunctuated) return `${existing}. ${chunk}`;
-  return existing.endsWith(' ') ? existing + chunk : `${existing} ${chunk}`;
+  if (existing.endsWith('\n') || existing.endsWith(' ')) return existing + chunk;
+  return `${existing} ${chunk}`;
+}
+
+// Adds a period if the text doesn't already end in sentence punctuation —
+// used when the silence timer fires, not when new speech arrives.
+function addTrailingPeriod(text) {
+  if (!text || text.endsWith('\n') || /[.!?]\s*$/.test(text)) return text;
+  return `${text}.`;
 }
 
 // ---------- engine ----------
@@ -133,7 +136,7 @@ export default function useSpeechRecognition(options = {}) {
     lang = 'en-US',
     maxAlternatives = 1,
     autoRestart = false,
-    pauseGapMs = 1500, // silence longer than this before a chunk implies a new sentence
+    pauseGapMs = 4000, // silence this long triggers an auto period on its own
     engineFactory = createWebSpeechEngine,
   } = options;
 
@@ -146,7 +149,14 @@ export default function useSpeechRecognition(options = {}) {
   const engineRef = useRef(null);
   const isListeningRef = useRef(false);
   const shouldRestartRef = useRef(false);
-  const lastFinalAtRef = useRef(null);
+  const pauseTimerRef = useRef(null);
+
+  const clearPauseTimer = useCallback(() => {
+    if (pauseTimerRef.current) {
+      clearTimeout(pauseTimerRef.current);
+      pauseTimerRef.current = null;
+    }
+  }, []);
 
   const config = useMemo(
     () => ({ continuous, interimResults, lang, maxAlternatives }),
@@ -162,11 +172,13 @@ export default function useSpeechRecognition(options = {}) {
     setIsSupported(true);
 
     engine.on('result', ({ finalChunk, interim }) => {
+      clearPauseTimer();
+      pauseTimerRef.current = setTimeout(() => {
+        setTranscript((prev) => addTrailingPeriod(prev));
+      }, pauseGapMs);
+
       if (finalChunk) {
-        const now = Date.now();
-        const pauseDetected = lastFinalAtRef.current !== null && now - lastFinalAtRef.current > pauseGapMs;
-        lastFinalAtRef.current = now;
-        setTranscript((prev) => appendChunk(prev, formatFinalChunk(finalChunk), pauseDetected));
+        setTranscript((prev) => appendChunk(prev, formatFinalChunk(finalChunk)));
         setInterimTranscript('');
       } else {
         setInterimTranscript(interim);
@@ -179,6 +191,7 @@ export default function useSpeechRecognition(options = {}) {
     });
 
     engine.on('end', () => {
+      clearPauseTimer();
       isListeningRef.current = false;
       setIsListening(false);
       setInterimTranscript('');
@@ -198,12 +211,13 @@ export default function useSpeechRecognition(options = {}) {
 
     return () => {
       shouldRestartRef.current = false;
+      clearPauseTimer();
       engine.stop();
       engine.destroy();
       engineRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config, engineFactory, autoRestart, pauseGapMs]);
+  }, [config, engineFactory, autoRestart, pauseGapMs, clearPauseTimer]);
 
   const startListening = useCallback(() => {
     const engine = engineRef.current;
@@ -219,9 +233,10 @@ export default function useSpeechRecognition(options = {}) {
 
   const stopListening = useCallback(() => {
     shouldRestartRef.current = false;
+    clearPauseTimer();
     if (!engineRef.current || !isListeningRef.current) return;
     engineRef.current.stop();
-  }, []);
+  }, [clearPauseTimer]);
 
   const toggleListening = useCallback(() => {
     isListeningRef.current ? stopListening() : startListening();
@@ -230,15 +245,16 @@ export default function useSpeechRecognition(options = {}) {
   const resetTranscript = useCallback(() => {
     setTranscript('');
     setInterimTranscript('');
-    lastFinalAtRef.current = null;
-  }, []);
+    clearPauseTimer();
+  }, [clearPauseTimer]);
 
   useEffect(() => {
     return () => {
       shouldRestartRef.current = false;
+      clearPauseTimer();
       engineRef.current?.abort();
     };
-  }, []);
+  }, [clearPauseTimer]);
 
   return {
     transcript,

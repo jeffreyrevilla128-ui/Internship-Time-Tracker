@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { saveDay, saveDiaryOnly, fetchDay } from '../services/attendanceapi';
 import useSpeechRecognition from '../hooks/UsespeechRecognition';
+import { checkGrammarViaApi } from '../services/grammarChecker';
 
 // Formats a raw Date object into a readable 12-hour string (e.g., "08:30 AM")
 const formatTo12Hour = (date) => {
@@ -223,6 +224,12 @@ export default function PunchCard({ shiftState, setShiftState }) {
   // Diary text as it was right before the current dictation session started,
   // so recognized speech is appended to it rather than overwriting it.
   const diaryBaseTextRef = useRef('');
+
+  // --- Grammar check for the diary textarea ---
+  const [isCheckingGrammar, setIsCheckingGrammar] = useState(false);
+  const [grammarError, setGrammarError] = useState(null);
+  const [canUndoGrammarCheck, setCanUndoGrammarCheck] = useState(false);
+  const preGrammarCheckDraftRef = useRef('');
 
   // --- Whether an already-recorded time is currently being edited ---
   const [editingIn, setEditingIn] = useState(false);
@@ -521,12 +528,67 @@ export default function PunchCard({ shiftState, setShiftState }) {
     setDiaryDraft(clampToDiaryWordLimit(merged));
   }, [speechTranscript]);
 
+  // Runs a chunk of text through grammar correction and applies the result.
+  // checkGrammarViaApi never throws — on any failure it resolves with the
+  // original text and corrected: false, so this never needs a catch block.
+  const runGrammarCheck = async (textToCheck) => {
+    const trimmedText = textToCheck.trim();
+    if (!trimmedText || isCheckingGrammar) return;
+
+    setGrammarError(null);
+    setIsCheckingGrammar(true);
+    const preCheckDraft = textToCheck;
+    const { correctedText, corrected } = await checkGrammarViaApi(trimmedText);
+    setIsCheckingGrammar(false);
+
+    if (!corrected) {
+      setGrammarError('Grammar check is unavailable right now — kept your original text.');
+      return;
+    }
+    preGrammarCheckDraftRef.current = preCheckDraft;
+    setDiaryDraft(clampToDiaryWordLimit(correctedText));
+    setCanUndoGrammarCheck(true);
+  };
+
+  // Manual trigger for the "Check Grammar" button — checks whatever is
+  // currently in the textarea, typed or dictated.
+  const handleCheckGrammar = () => runGrammarCheck(diaryDraft);
+
+  const handleUndoGrammarCheck = () => {
+    setDiaryDraft(preGrammarCheckDraftRef.current);
+    setCanUndoGrammarCheck(false);
+  };
+
+  // Automatic pipeline: Speech Recognition -> Transcript -> Grammar Service
+  // -> Diary Textarea. The moment dictation stops (mic toggled off while the
+  // diary modal is still open), whatever was just recognized is sent for
+  // correction automatically — no manual click required for dictated text.
+  const wasMicListeningRef = useRef(false);
+  useEffect(() => {
+    const justStoppedListening = wasMicListeningRef.current && !isMicListening;
+    wasMicListeningRef.current = isMicListening;
+
+    if (justStoppedListening && modalView === 'diary' && speechTranscript.trim()) {
+      // Recompute the merged text from source (base + speechTranscript)
+      // instead of reading `diaryDraft` state. When the final onresult and
+      // onend fire in the same batched commit, the merge effect that sets
+      // diaryDraft hasn't been reflected in this render's closure yet, so
+      // diaryDraft can be one chunk behind here.
+      const base = diaryBaseTextRef.current;
+      const finalMerged = base ? `${base} ${speechTranscript}` : speechTranscript;
+      runGrammarCheck(clampToDiaryWordLimit(finalMerged));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMicListening]);
+
   // Release the mic and clear any in-progress dictation whenever the diary
   // modal isn't the active view (closed, or a shift modal opened instead).
   useEffect(() => {
     if (modalView !== 'diary') {
       stopListening();
       resetTranscript();
+      setGrammarError(null);
+      setCanUndoGrammarCheck(false);
     }
   }, [modalView, stopListening, resetTranscript]);
 
@@ -785,6 +847,24 @@ export default function PunchCard({ shiftState, setShiftState }) {
                   )}
                   {micError && (
                     <p className="diary-mic-error" role="alert">⚠️ {micError}</p>
+                  )}
+                  <div className="diary-grammar-row">
+                    <button
+                      type="button"
+                      className="diary-grammar-btn"
+                      onClick={handleCheckGrammar}
+                      disabled={!diaryDraft.trim() || isCheckingGrammar}
+                    >
+                      {isCheckingGrammar ? 'Checking…' : '✓ Check Grammar'}
+                    </button>
+                    {canUndoGrammarCheck && (
+                      <button type="button" className="diary-grammar-undo" onClick={handleUndoGrammarCheck}>
+                        Undo
+                      </button>
+                    )}
+                  </div>
+                  {grammarError && (
+                    <p className="diary-mic-error" role="alert">⚠️ {grammarError}</p>
                   )}
                   <div className="diary-quick-footer">
                     <span className="diary-quick-word-count">
