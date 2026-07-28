@@ -341,16 +341,32 @@
   pointer-events: none;
 }
 
-.auth-mobile-hero-content,
-.auth-mobile-get-started-btn {
-  position: relative;
-  z-index: 1;
-}
-
+/* Content and CTA are positioned independently (both absolute within
+   .auth-mobile-hero) instead of via flex space-between. This lets the
+   content block be vertically centered on first load, then animated
+   upward on its own — in sync with the sheet's slide-up — once
+   "Get Started" is tapped. See the sheet-open override below and the
+   mobile media query for the positioning values. */
 .auth-mobile-hero-content {
+  position: absolute;
+  left: 1.75rem;
+  right: 1.75rem;
+  top: 50%;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  transform: translateY(-50%);
+  /* Same duration/easing as .auth-card's slide-up (section 8) so both
+     layers move together. */
+  transition: top 0.45s var(--ease-standard);
+}
+
+.auth-mobile-get-started-btn {
+  position: absolute;
+  left: 1.75rem;
+  right: 1.75rem;
+  z-index: 1;
 }
 
 .auth-mobile-hero-logo,
@@ -394,6 +410,10 @@
   font-weight: 800;
   line-height: 1.25;
   letter-spacing: -0.01em;
+  /* Starts hidden — see .auth-mobile-hero-title, .auth-mobile-hero-tagline
+     entrance rule below. Only the logo is visible on first paint. */
+  opacity: 0;
+  animation: authHeroTextIn 0.6s var(--ease-standard) 0.5s forwards;
 }
 
 .auth-mobile-hero-tagline {
@@ -402,6 +422,24 @@
   font-size: 0.875rem;
   line-height: 1.55;
   color: rgb(255 255 255 / 0.85);
+  /* Staggered slightly behind the title so the two lines settle one
+     after the other rather than snapping in together. */
+  opacity: 0;
+  animation: authHeroTextIn 0.6s var(--ease-standard) 0.68s forwards;
+}
+
+/* Move-up + fade-in entrance for the headline/tagline — the logo above
+   is visible immediately; these two slide up into place shortly after,
+   so the hero reveals itself in two beats instead of all at once. */
+@keyframes authHeroTextIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .auth-mobile-get-started-btn {
@@ -650,14 +688,25 @@
   }
 
   /* --- Stage 1: full-screen hero with the "Get Started" CTA --------- */
+  /* .auth-mobile-hero-content and .auth-mobile-get-started-btn (4b)
+     position themselves absolutely within this layer, so it no longer
+     needs to be a flex container itself. */
   .auth-mobile-hero {
     position: absolute;
     inset: 0;
     z-index: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 4.5rem 1.75rem 3rem;
+  }
+
+  .auth-mobile-get-started-btn {
+    bottom: 3rem;
+  }
+
+  /* --- Content moves up in step with the sheet's slide-up ----------- */
+  /* The sheet covers the bottom half of the screen, so once it's open
+     the content re-centers within the remaining top half instead of
+     the full screen. */
+  .auth-form-panel.auth-sheet-open .auth-mobile-hero-content {
+    top: 25%;
   }
 
   /* --- Stage 2: bottom sheet, off-screen until "Get Started" is tapped */
