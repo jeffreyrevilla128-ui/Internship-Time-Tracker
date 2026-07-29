@@ -341,12 +341,11 @@
   pointer-events: none;
 }
 
-/* Content and CTA are positioned independently (both absolute within
-   .auth-mobile-hero) instead of via flex space-between. This lets the
-   content block be vertically centered on first load, then animated
-   upward on its own — in sync with the sheet's slide-up — once
-   "Get Started" is tapped. See the sheet-open override below and the
-   mobile media query for the positioning values. */
+/* Absolutely positioned (rather than flex-centered) so it can be
+   vertically centered on first load, then animated upward on its own
+   — in sync with the sheet's auto slide-up — once the intro sequence
+   finishes. See the sheet-open override below and the mobile media
+   query for the positioning values. */
 .auth-mobile-hero-content {
   position: absolute;
   left: 1.75rem;
@@ -360,13 +359,6 @@
   /* Same duration/easing as .auth-card's slide-up (section 8) so both
      layers move together. */
   transition: top 0.45s var(--ease-standard);
-}
-
-.auth-mobile-get-started-btn {
-  position: absolute;
-  left: 1.75rem;
-  right: 1.75rem;
-  z-index: 1;
 }
 
 .auth-mobile-hero-logo,
@@ -410,10 +402,10 @@
   font-weight: 800;
   line-height: 1.25;
   letter-spacing: -0.01em;
-  /* Starts hidden — see .auth-mobile-hero-title, .auth-mobile-hero-tagline
-     entrance rule below. Only the logo is visible on first paint. */
+  /* Starts hidden — revealed automatically on load, right after the
+     clock icon finishes spinning in (see the entrance rule below). */
   opacity: 0;
-  animation: authHeroTextIn 0.6s var(--ease-standard) 0.5s forwards;
+  transform: translateY(18px);
 }
 
 .auth-mobile-hero-tagline {
@@ -422,15 +414,25 @@
   font-size: 0.875rem;
   line-height: 1.55;
   color: rgb(255 255 255 / 0.85);
-  /* Staggered slightly behind the title so the two lines settle one
-     after the other rather than snapping in together. */
   opacity: 0;
-  animation: authHeroTextIn 0.6s var(--ease-standard) 0.68s forwards;
+  transform: translateY(18px);
 }
 
-/* Move-up + fade-in entrance for the headline/tagline — the logo above
-   is visible immediately; these two slide up into place shortly after,
-   so the hero reveals itself in two beats instead of all at once. */
+/* Move-up + fade-in entrance for the headline/tagline. Plays
+   automatically on load — no tap required. Delay is timed to start
+   just after the clock icon's spin-in finishes (JS triggers that at
+   150ms, and .auth-logo-spin runs 900ms => ends ~1050ms), so the
+   sequence reads as icon, then text, then (via the JS timeout in
+   AuthPage.jsx) the Google sign-in sheet. Tagline is staggered
+   slightly behind the title so the two lines settle one after another. */
+.auth-mobile-hero-title {
+  animation: authHeroTextIn 0.6s var(--ease-standard) 1.1s forwards;
+}
+
+.auth-mobile-hero-tagline {
+  animation: authHeroTextIn 0.6s var(--ease-standard) 1.3s forwards;
+}
+
 @keyframes authHeroTextIn {
   from {
     opacity: 0;
@@ -440,36 +442,6 @@
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-.auth-mobile-get-started-btn {
-  display: block;
-  width: 100%;
-  max-width: 320px;
-  margin: 0 auto;
-  padding: 1.05rem 1.5rem;
-  border: none;
-  border-radius: 9999px;
-  background-color: #ffffff;
-  color: var(--color-accent);
-  font-family: inherit;
-  font-size: 1rem;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  cursor: pointer;
-  box-shadow: 0 14px 32px -10px rgb(0 0 0 / 0.4);
-  transition: transform var(--duration-fast) var(--ease-standard),
-              box-shadow var(--duration-fast) var(--ease-standard);
-}
-
-.auth-mobile-get-started-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 16px 36px -10px rgb(0 0 0 / 0.45);
-}
-
-.auth-mobile-get-started-btn:active {
-  transform: translateY(0);
-  box-shadow: 0 8px 20px -8px rgb(0 0 0 / 0.35);
 }
 
 @media (min-width: 900px) {
@@ -656,15 +628,18 @@
 /* ================================================================= */
 /* 8. MOBILE ONBOARDING FLOW (below 900px)                           */
 /* Two stages within .auth-form-panel, which becomes a fixed,         */
-/* viewport-locked stage so the two layers can be positioned exactly: */
-/*   1. .auth-mobile-hero fills the whole screen with branding and    */
-/*      the "Get Started" CTA — the ONLY thing visible on first load. */
-/*   2. Tapping it adds .auth-sheet-open to .auth-form-panel, which   */
-/*      slides .auth-card up from translateY(100%) to its resting     */
-/*      position as a bottom sheet, overlapping the hero so its top   */
-/*      portion (logo/headline) stays visible behind it — matching    */
-/*      the reference's slide-up flow, recolored to the app's teal    */
-/*      theme instead of purple.                                      */
+/* viewport-locked stage so the two layers can be positioned exactly. */
+/* The whole sequence now plays automatically on load — no tap        */
+/* required at any step:                                              */
+/*   1. .auth-mobile-hero fills the whole screen; the clock icon      */
+/*      spins in first (JS-triggered, section 4b), then the headline  */
+/*      and tagline fade/slide up (pure CSS, section 4b).             */
+/*   2. Once that finishes, a JS timeout (AuthPage.jsx) adds           */
+/*      .auth-sheet-open to .auth-form-panel, which slides .auth-card */
+/*      up from translateY(100%) to its resting position as a bottom  */
+/*      sheet, overlapping the hero so its top portion (logo/headline)*/
+/*      stays visible behind it — matching the reference's slide-up   */
+/*      flow, recolored to the app's teal theme instead of purple.    */
 /* Everything here is scoped to max-width: 899px, so the shared base  */
 /* rules — .auth-form-panel (section 3) and .auth-card (section 4) —  */
 /* still serve the 900px+ desktop layout completely unchanged.        */
@@ -687,18 +662,13 @@
     overflow: hidden;
   }
 
-  /* --- Stage 1: full-screen hero with the "Get Started" CTA --------- */
-  /* .auth-mobile-hero-content and .auth-mobile-get-started-btn (4b)
-     position themselves absolutely within this layer, so it no longer
-     needs to be a flex container itself. */
+  /* --- Stage 1: full-screen hero, clock icon + text intro ----------- */
+  /* .auth-mobile-hero-content (4b) positions itself absolutely within
+     this layer, so it no longer needs to be a flex container itself. */
   .auth-mobile-hero {
     position: absolute;
     inset: 0;
     z-index: 1;
-  }
-
-  .auth-mobile-get-started-btn {
-    bottom: 3rem;
   }
 
   /* --- Content moves up in step with the sheet's slide-up ----------- */
@@ -709,7 +679,7 @@
     top: 25%;
   }
 
-  /* --- Stage 2: bottom sheet, off-screen until "Get Started" is tapped */
+  /* --- Stage 2: bottom sheet, off-screen until the intro finishes --- */
   .auth-card {
     position: absolute;
     left: 0;

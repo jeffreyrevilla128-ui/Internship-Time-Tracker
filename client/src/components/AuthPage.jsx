@@ -46,11 +46,12 @@ const IconGoogle = (props) => (
 
 export default function AuthPage({ onLogin, onGoogleAuth }) {
   // --- Mobile onboarding flow --------------------------------------------
-  // Below 900px the page starts on a full-screen hero (branding +
-  // "Get Started"). Tapping it reveals the existing Google-only auth
-  // card as a bottom sheet that slides up over the hero. Desktop is
-  // unaffected — .auth-mobile-hero is display:none there, so this state
-  // has no visual effect above 900px.
+  // Below 900px the page starts on a full-screen hero. Once the intro
+  // animation finishes (see the useEffect below) this flips true on its
+  // own, revealing the existing Google-only auth card as a bottom sheet
+  // that slides up over the hero. Desktop is unaffected —
+  // .auth-mobile-hero is display:none there, so this state has no
+  // visual effect above 900px.
   const [showAuthSheet, setShowAuthSheet] = useState(false);
 
   // --- Shared submit/notice state -------------------------------------------
@@ -99,6 +100,28 @@ export default function AuthPage({ onLogin, onGoogleAuth }) {
     },
     []
   );
+
+  // =========================================================================
+  // MOBILE LANDING INTRO — plays automatically on mount, no tap required.
+  // Sequence: clock icon spins in -> headline/tagline fade up (pure CSS,
+  // timed via animation-delay in AuthPage.css) -> Google sign-in sheet
+  // slides up. The two timeouts below only need to (1) kick off the icon
+  // spin and (2) flip showAuthSheet once the text has finished animating;
+  // the icon and text animations themselves are driven entirely by CSS so
+  // their timing stays in one place (the stylesheet).
+  //   150ms  -> icon spin starts (900ms animation, ends ~1050ms)
+  //   1100ms -> title starts fading up (600ms, ends 1700ms) [CSS]
+  //   1300ms -> tagline starts fading up (600ms, ends 1900ms) [CSS]
+  //   2000ms -> sheet + Google button slide up (450ms transition)
+  useEffect(() => {
+    const iconTimer = setTimeout(() => spinLogo(mobileLogoIconRef), 150);
+    const sheetTimer = setTimeout(() => setShowAuthSheet(true), 2000);
+    return () => {
+      clearTimeout(iconTimer);
+      clearTimeout(sheetTimer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // =========================================================================
   // GOOGLE SIGN-IN — the only authentication path. Existing backend logic
@@ -186,12 +209,14 @@ export default function AuthPage({ onLogin, onGoogleAuth }) {
             min-width:900px, same pattern already used by
             .auth-brand-panel / .auth-card-mobile-logo above.
 
-            Two-stage onboarding flow (mobile only):
-              1. Hero fills the screen with branding + "Get Started".
-              2. Tapping it sets showAuthSheet=true, which slides the
+            Auto-playing intro (mobile only, see the useEffect above):
+              1. Clock icon spins in on mount.
+              2. Headline + tagline fade/slide up shortly after (CSS
+                 animation-delay, no interaction needed).
+              3. showAuthSheet flips true once that's done, sliding the
                  existing Google-only auth card up from the bottom as
-                 an overlay, leaving the top of the hero visible behind
-                 it (see .auth-sheet-open rules in the CSS). */}
+                 an overlay over the hero (see .auth-sheet-open rules
+                 in the CSS). No tap required at any step. */}
         <div className="auth-mobile-hero">
           <div className="auth-mobile-hero-content">
             <div className="auth-mobile-hero-logo">
@@ -217,16 +242,6 @@ export default function AuthPage({ onLogin, onGoogleAuth }) {
               Track your progress, log your hours, and stay organized throughout your internship.
             </p>
           </div>
-
-          {!showAuthSheet && (
-            <button
-              type="button"
-              className="auth-mobile-get-started-btn"
-              onClick={() => setShowAuthSheet(true)}
-            >
-              Get Started
-            </button>
-          )}
         </div>
 
         <div className="auth-card auth-card-google-only" aria-hidden={!showAuthSheet}>
