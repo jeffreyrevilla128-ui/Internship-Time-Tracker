@@ -250,6 +250,35 @@ export default function OJTDashboard({ user, onLogout }) {
     }
   };
 
+  // --- Header logo click "spin" animation -----------------------------
+  // Mirrors the identical interaction on AuthPage's brand logo (see
+  // AuthPage.jsx / AuthPage.css) so the mark behaves the same way
+  // wherever it appears. Toggling via ref + classList (rather than React
+  // state) means a click mid-animation restarts it immediately: remove
+  // the class, force a reflow, then re-add it — no queued/overlapping
+  // animations, no jitter.
+  const logoIconRef = useRef(null);
+
+  const spinLogo = (ref) => {
+    const el = ref.current;
+    if (!el) return;
+    el.classList.remove('dashboard-logo-spin');
+    // eslint-disable-next-line no-void
+    void el.offsetWidth; // force reflow so the animation restarts from 0%
+    el.classList.add('dashboard-logo-spin');
+  };
+
+  const handleLogoKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      spinLogo(logoIconRef);
+    }
+  };
+
+  const clearLogoSpin = (e) => {
+    e.currentTarget.classList.remove('dashboard-logo-spin');
+  };
+
   // --- Today's shift, shared by PunchCard + DiaryForm ---------------------
   const [shiftState, setShiftState] = useState(EMPTY_SHIFT);
 
@@ -498,7 +527,25 @@ export default function OJTDashboard({ user, onLogout }) {
       {/* Full-width top header bar with branding and responsive right-side profile */}
       <header className="app-topbar">
         <h1 className="dashboard-header-title">
-          <span aria-hidden="true">⏱️</span>
+          {/* Same clock-glyph mark + spin-on-click interaction as the
+              brand panel on AuthPage (.auth-brand-logo-icon), so the
+              logo is visually and behaviorally consistent across both
+              screens. */}
+          <span
+            className="dashboard-header-logo-icon"
+            ref={logoIconRef}
+            role="button"
+            tabIndex={0}
+            aria-label="OJT Tracker logo"
+            onClick={() => spinLogo(logoIconRef)}
+            onKeyDown={handleLogoKeyDown}
+            onAnimationEnd={clearLogoSpin}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+              <path d="M12 7v5.2l3.4 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
           <span>OJT TRACKER</span>
         </h1>
         

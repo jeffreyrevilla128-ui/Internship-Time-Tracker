@@ -158,6 +158,77 @@
   background-clip: text;
 }
 
+/* ================================================================= */
+/* 3b. HEADER LOGO MARK                                               */
+/* Same chip-and-clock-glyph mark used on AuthPage's brand panel      */
+/* (.auth-brand-logo-icon / .auth-mobile-hero-logo-icon), so the logo */
+/* reads as the same piece of branding on both screens. Colors are    */
+/* pulled from the dashboard's own --color-* tokens (rather than the  */
+/* fixed #0891b2/white values AuthPage uses) so the chip still adapts */
+/* correctly under [data-theme="dark"].                               */
+/* ================================================================= */
+.dashboard-header-logo-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.125rem;
+  height: 2.125rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  /* Solid saturated gradient (same pairing as .profile-avatar) rather
+     than a soft theme-tinted tint — a fixed-contrast badge like this
+     reads clearly against both the light surface and the dark navy
+     surface, instead of blending into whichever one is active. */
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-light));
+  box-shadow: 0 4px 12px -2px rgb(8 145 178 / 0.45);
+  color: #ffffff;
+  cursor: pointer;
+  user-select: none;
+  transform-origin: 50% 50%;
+  will-change: transform;
+  -webkit-tap-highlight-color: transparent;
+  transition: box-shadow var(--duration-fast) var(--ease-standard),
+              transform var(--duration-fast) var(--ease-standard);
+}
+
+.dashboard-header-logo-icon svg {
+  filter: drop-shadow(0 0 1px rgb(0 0 0 / 0.15));
+}
+
+.dashboard-header-logo-icon:hover,
+.dashboard-header-logo-icon:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px -4px rgb(8 145 178 / 0.55);
+}
+
+/* Toggled by the component on click/keypress — see spinLogo() in
+   OJTDashboard.jsx. Identical timing/easing to AuthPage's
+   authLogoSpin so the interaction feels the same in both places. */
+.dashboard-logo-spin {
+  animation: dashboardLogoSpin 0.9s cubic-bezier(0.45, 0, 0.2, 1);
+}
+
+@keyframes dashboardLogoSpin {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  16% {
+    transform: scale(1.18) rotate(0deg);
+  }
+  32% {
+    transform: scale(1) rotate(0deg);
+  }
+  46% {
+    transform: scale(0.86) rotate(0deg);
+  }
+  70% {
+    transform: scale(0.93) rotate(180deg);
+  }
+  100% {
+    transform: scale(1) rotate(360deg);
+  }
+}
+
 /* Dropdown Chevron Indicator Styling */
 .logo-dropdown-chevron {
   width: 1.125rem;

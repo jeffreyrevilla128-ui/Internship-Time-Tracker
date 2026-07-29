@@ -249,6 +249,12 @@ export default function AuthPage({ onLogin, onGoogleAuth }) {
               the full welcome message on small screens, so this sheet
               just needs a short prompt instead of repeating it. Hidden
               on desktop, where .auth-card-header below still renders. */}
+          <div className="auth-sheet-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="1.8" />
+              <path d="M8 11V7a4 4 0 0 1 8 0v4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          </div>
           <h2 className="auth-mobile-sheet-heading">Sign in to continue</h2>
 
           <div className="auth-card-header">

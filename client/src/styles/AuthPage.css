@@ -454,14 +454,46 @@
    (see section 8) and this short heading takes its place. */
 .auth-mobile-sheet-heading {
   display: none;
-  margin: 0 0 1.25rem;
-  font-size: 1.5rem;
+  margin: 0 0 1rem;
+  font-size: 1.375rem;
   font-weight: 800;
   /* Uses the shared teal accent token so it matches the hero's
      navy/teal gradient family (and stays correct in dark mode too),
      instead of the old hardcoded purple. */
   color: var(--color-accent);
   letter-spacing: -0.01em;
+}
+
+/* Small badge icon shown above the compact mobile heading — purely
+   decorative (echoes the "secure sign-in" promise in the terms note
+   below), kept subtle/minimal rather than a second competing focal
+   point next to the hero's own logo mark above it. Desktop keeps its
+   existing header/eyebrow treatment untouched. */
+.auth-sheet-icon {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  .auth-sheet-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 4rem;
+    height: 4rem;
+    margin: 0 auto 1.125rem;
+    border-radius: 1.25rem;
+    background: var(--color-accent-soft);
+    color: var(--color-accent);
+  }
+
+  /* The SVG itself still carries width="18" height="18" from the JSX
+     markup, but CSS on the root <svg> takes precedence over those
+     presentation attributes, so this scales it up to fill the larger
+     badge without touching the component. */
+  .auth-sheet-icon svg {
+    width: 30px;
+    height: 30px;
+  }
 }
 
 @media (max-width: 899px) {
@@ -680,6 +712,11 @@
   }
 
   /* --- Stage 2: bottom sheet, off-screen until the intro finishes --- */
+  /* Height is intentionally NOT fixed — the sheet hugs its content
+     (icon + heading + button + terms note) instead of being forced to
+     fill a 50% band, which used to leave a large dead-air gap below the
+     terms note. max-height + overflow-y:auto is just a safety net for
+     very small/short viewports. */
   .auth-card {
     position: absolute;
     left: 0;
@@ -688,8 +725,8 @@
     z-index: 2;
     width: 100%;
     max-width: none;
-    height: 50%;
-    max-height: 50%;
+    height: auto;
+    max-height: 80vh;
     margin: 0;
     border: none;
     border-radius: 2.5rem 2.5rem 0 0;
@@ -700,7 +737,7 @@
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
     transform: translateY(100%);
     pointer-events: none;
     transition: transform 0.45s var(--ease-standard);
@@ -716,15 +753,21 @@
      compact .auth-mobile-sheet-heading (section 4b) takes its place. */
   .auth-card-header { display: none; }
 
-  /* Center the sign-in content within the sheet's available height. */
+  /* Content now sizes to itself rather than stretching to fill a fixed
+     50%-height sheet. */
   .auth-card-google-only {
-    justify-content: center;
-    height: 100%;
+    justify-content: flex-start;
+    height: auto;
   }
 
   /* Mobile CTA inside the sheet inherits the shared teal
      .auth-google-btn-primary styling (section 7) unchanged, so it
-     matches the hero's navy/teal palette on small screens too. */
+     matches the hero's navy/teal palette on small screens too. Only
+     the vertical gaps around it are restored here to a fuller, more
+     natural rhythm — the button's own size/color styling is untouched. */
+  .auth-card-google-only .auth-notice { margin-bottom: 1.25rem; }
+  .auth-card-google-only .auth-google-btn-primary { margin-top: 0.75rem; }
+  .auth-card-google-only .auth-terms-note { margin-top: 1.25rem; }
 }
 
 @media (max-width: 380px) {
