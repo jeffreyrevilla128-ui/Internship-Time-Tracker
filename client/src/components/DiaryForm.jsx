@@ -1,19 +1,19 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { saveDiaryOnly, deleteDiaryEntry } from '../services/attendanceapi';
 import UseSpeechRecognition from '../hooks/UsespeechRecognition';
 
 const WORD_LIMIT = 1000;
 
-// Minimal inline speaker icon (kept dependency-free, mirrors PunchCard's MicIcon)
-function SpeakerIcon({ active }) {
+// Minimal inline microphone icon (kept dependency-free). The button itself
+// (see .diary-mic-btn-active in the CSS) handles the "actively listening"
+// state via a red fill + pulse animation, so the glyph stays constant.
+function MicIcon() {
   return (
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M4 9v6h4l5 4V5L8 9H4Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      {active ? (
-        <path d="M18 8a6 6 0 0 1 0 8M15 10.5a2.5 2.5 0 0 1 0 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      ) : (
-        <path d="M16 9a4 4 0 0 1 0 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      )}
+      <rect x="9" y="2.5" width="6" height="11" rx="3" stroke="currentColor" strokeWidth="2" />
+      <path d="M5 11a7 7 0 0 0 14 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <line x1="12" y1="18" x2="12" y2="21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -141,39 +141,73 @@ export default function DiaryForm({ shiftState = {}, setShiftState, logs = [], i
   const [isSavingEntry, setIsSavingEntry] = useState(false);
   const [isDeletingEntry, setIsDeletingEntry] = useState(false);
 
-  // --- Text-to-speech: read the in-progress draft back out loud, for the
-  // "new entry" panel and the "edit entry" panel inside the View modal. Both
-  // share a single TTS instance (only one draft is ever being written at a
-  // time), with `ttsTarget` tracking which one ('new' | 'edit') is reading.
+  // --- Speech-to-text dictation: lets the user talk instead of type, for
+  // both the "new entry" panel and the "edit entry" panel inside the View
+  // modal. The hook only ever runs one recognition session at a time, so
+  // `dictationTarget` tracks which field ('new' | 'edit') is currently
+  // receiving speech — mirrors the single-instance pattern used elsewhere
+  // in this file (e.g. the toast/delete-modal state).
   const {
-    isSpeaking,
-    isSupported: isTtsSupported,
-    error: ttsError,
-    speak,
-    stop: stopSpeaking,
-  } = UseSpeechRecognition({ lang: 'en-US' });
-  const [ttsTarget, setTtsTarget] = useState(null);
+    transcript,
+    isListening,
+    isSupported: isDictationSupported,
+    error: dictationError,
+    startListening,
+    stopListening,
+    resetTranscript,
+  } = UseSpeechRecognition({ lang: 'en-US', autoRestart: true });
+  const [dictationTarget, setDictationTarget] = useState(null);
+  // Snapshot of whatever text was already in the field the moment dictation
+  // started, so spoken words are appended after it instead of replacing it.
+  // The hook's own `transcript` always starts fresh from '' each session.
+  const dictationBaseTextRef = useRef('');
 
-  // Toggles read-aloud for a given panel ('new' | 'edit'). Tapping the
-  // button on whichever panel is already reading stops it; tapping it on
-  // the other panel hands the voice over to that one instead.
-  const handleToggleReadAloud = (target, text) => {
-    if (isSpeaking && ttsTarget === target) {
-      stopSpeaking();
-      setTtsTarget(null);
-      return;
-    }
-    setTtsTarget(target);
-    speak(text);
+  // Joins pre-existing field text with the hook's accumulated transcript,
+  // adding a separating space unless one's already there — same spacing
+  // rule the hook itself uses internally (see appendChunk in the hook file).
+  const joinDictatedText = (base, dictated) => {
+    if (!dictated) return base;
+    if (!base) return dictated;
+    return base.endsWith('\n') || base.endsWith(' ') ? `${base}${dictated}` : `${base} ${dictated}`;
   };
 
-  // If the person keeps typing while their own draft is being read back,
-  // stop — otherwise the voice reads a version of the text that's already
-  // out of date the moment they touch the keyboard.
-  const stopReadAloudIfActive = (target) => {
-    if (isSpeaking && ttsTarget === target) {
-      stopSpeaking();
-      setTtsTarget(null);
+  // Every time the hook produces new finalized speech, fold it onto
+  // whichever field is currently listening.
+  useEffect(() => {
+    if (!dictationTarget) return;
+    const combined = joinDictatedText(dictationBaseTextRef.current, transcript);
+    if (dictationTarget === 'new') {
+      setNewDraft(clampToWordLimit(combined));
+    } else if (dictationTarget === 'edit') {
+      setEditDraft(clampToWordLimit(combined));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [transcript, dictationTarget]);
+
+  // Toggles dictation for a given panel ('new' | 'edit'). Tapping the mic on
+  // whichever panel is already listening stops it. The other panel's mic
+  // button is disabled while a session is active (see JSX below) rather than
+  // hot-swapping targets, since stopListening()'s effects land asynchronously
+  // and starting a second session before that lands would silently no-op.
+  const handleToggleDictation = (target, currentText) => {
+    if (isListening && dictationTarget === target) {
+      stopListening();
+      setDictationTarget(null);
+      return;
+    }
+    dictationBaseTextRef.current = currentText;
+    resetTranscript();
+    setDictationTarget(target);
+    startListening();
+  };
+
+  // If the person keeps typing while their own draft is being dictated into,
+  // stop — otherwise the next recognized phrase would overwrite whatever
+  // they just typed by hand.
+  const stopDictationIfActive = (target) => {
+    if (isListening && dictationTarget === target) {
+      stopListening();
+      setDictationTarget(null);
     }
   };
 
@@ -204,7 +238,7 @@ export default function DiaryForm({ shiftState = {}, setShiftState, logs = [], i
 
   const handleNewDraftChange = (e) => {
     setNewDraft(clampToWordLimit(e.target.value));
-    stopReadAloudIfActive('new');
+    stopDictationIfActive('new');
   };
 
   const handleCreateNew = async () => {
@@ -221,7 +255,7 @@ export default function DiaryForm({ shiftState = {}, setShiftState, logs = [], i
     }));
     setNewDraft('');
     setIsAddingNew(false);
-    stopReadAloudIfActive('new');
+    stopDictationIfActive('new');
 
     setIsSavingEntry(true);
     try {
@@ -238,7 +272,7 @@ export default function DiaryForm({ shiftState = {}, setShiftState, logs = [], i
   const handleCancelNew = () => {
     setNewDraft('');
     setIsAddingNew(false);
-    stopReadAloudIfActive('new');
+    stopDictationIfActive('new');
   };
 
   // --- View modal open/close ---
@@ -246,14 +280,14 @@ export default function DiaryForm({ shiftState = {}, setShiftState, logs = [], i
     setActiveViewEntryId(entry.id);
     setEditingEntryId(null);
     setEditDraft('');
-    stopReadAloudIfActive('edit');
+    stopDictationIfActive('edit');
   };
 
   const closeViewModal = () => {
     setActiveViewEntryId(null);
     setEditingEntryId(null);
     setEditDraft('');
-    stopReadAloudIfActive('edit');
+    stopDictationIfActive('edit');
   };
 
   // --- Editing, entered only from inside the View modal ---
@@ -264,7 +298,7 @@ export default function DiaryForm({ shiftState = {}, setShiftState, logs = [], i
 
   const handleEditDraftChange = (e) => {
     setEditDraft(clampToWordLimit(e.target.value));
-    stopReadAloudIfActive('edit');
+    stopDictationIfActive('edit');
   };
 
   // Always updates the existing entry in place — never creates a new card for the same date.
@@ -287,7 +321,7 @@ export default function DiaryForm({ shiftState = {}, setShiftState, logs = [], i
     setEditingEntryId(null);
     setEditDraft('');
     setActiveViewEntryId(null);
-    stopReadAloudIfActive('edit');
+    stopDictationIfActive('edit');
 
     setIsSavingEntry(true);
     try {
@@ -305,7 +339,7 @@ export default function DiaryForm({ shiftState = {}, setShiftState, logs = [], i
   const handleCancelEdit = () => {
     setEditingEntryId(null);
     setEditDraft('');
-    stopReadAloudIfActive('edit');
+    stopDictationIfActive('edit');
   };
 
   // Opens the confirmation modal rather than deleting immediately
@@ -403,24 +437,24 @@ export default function DiaryForm({ shiftState = {}, setShiftState, logs = [], i
               placeholder="Describe your output clearly to authorize final afternoon clock-out submission..."
               className="diary-textarea"
             />
-            {isTtsSupported && (
+            {isDictationSupported && (
               <button
                 type="button"
-                className={`diary-tts-btn${isSpeaking && ttsTarget === 'new' ? ' diary-tts-btn-active' : ''}`}
-                onClick={() => handleToggleReadAloud('new', newDraft)}
-                disabled={!newDraft.trim()}
-                aria-label={isSpeaking && ttsTarget === 'new' ? 'Stop reading draft aloud' : 'Read draft aloud'}
-                title={isSpeaking && ttsTarget === 'new' ? 'Stop reading' : 'Read draft aloud'}
+                className={`diary-mic-btn${isListening && dictationTarget === 'new' ? ' diary-mic-btn-active' : ''}`}
+                onClick={() => handleToggleDictation('new', newDraft)}
+                disabled={isListening && dictationTarget !== 'new'}
+                aria-label={isListening && dictationTarget === 'new' ? 'Stop dictating' : 'Dictate entry by speaking'}
+                title={isListening && dictationTarget === 'new' ? 'Stop dictating' : 'Dictate by speaking'}
               >
-                <SpeakerIcon active={isSpeaking && ttsTarget === 'new'} />
+                <MicIcon />
               </button>
             )}
           </div>
-          {isSpeaking && ttsTarget === 'new' && (
-            <p className="diary-tts-status">🔊 Reading your draft aloud…</p>
+          {isListening && dictationTarget === 'new' && (
+            <p className="diary-dictation-status">🎙️ Listening… speak your entry.</p>
           )}
-          {ttsTarget === 'new' && ttsError && (
-            <p className="diary-tts-error" role="alert">⚠️ {ttsError}</p>
+          {dictationTarget === 'new' && dictationError && (
+            <p className="diary-dictation-error" role="alert">⚠️ {dictationError}</p>
           )}
           <div className="diary-panel-footer">
             <span className={`diary-word-count ${newOverLimit ? 'diary-word-count-limit' : ''}`}>
@@ -541,24 +575,24 @@ export default function DiaryForm({ shiftState = {}, setShiftState, logs = [], i
                       onChange={handleEditDraftChange}
                       className="diary-textarea"
                     />
-                    {isTtsSupported && (
+                    {isDictationSupported && (
                       <button
                         type="button"
-                        className={`diary-tts-btn${isSpeaking && ttsTarget === 'edit' ? ' diary-tts-btn-active' : ''}`}
-                        onClick={() => handleToggleReadAloud('edit', editDraft)}
-                        disabled={!editDraft.trim()}
-                        aria-label={isSpeaking && ttsTarget === 'edit' ? 'Stop reading draft aloud' : 'Read draft aloud'}
-                        title={isSpeaking && ttsTarget === 'edit' ? 'Stop reading' : 'Read draft aloud'}
+                        className={`diary-mic-btn${isListening && dictationTarget === 'edit' ? ' diary-mic-btn-active' : ''}`}
+                        onClick={() => handleToggleDictation('edit', editDraft)}
+                        disabled={isListening && dictationTarget !== 'edit'}
+                        aria-label={isListening && dictationTarget === 'edit' ? 'Stop dictating' : 'Dictate entry by speaking'}
+                        title={isListening && dictationTarget === 'edit' ? 'Stop dictating' : 'Dictate by speaking'}
                       >
-                        <SpeakerIcon active={isSpeaking && ttsTarget === 'edit'} />
+                        <MicIcon />
                       </button>
                     )}
                   </div>
-                  {isSpeaking && ttsTarget === 'edit' && (
-                    <p className="diary-tts-status">🔊 Reading your draft aloud…</p>
+                  {isListening && dictationTarget === 'edit' && (
+                    <p className="diary-dictation-status">🎙️ Listening… speak your update.</p>
                   )}
-                  {ttsTarget === 'edit' && ttsError && (
-                    <p className="diary-tts-error" role="alert">⚠️ {ttsError}</p>
+                  {dictationTarget === 'edit' && dictationError && (
+                    <p className="diary-dictation-error" role="alert">⚠️ {dictationError}</p>
                   )}
                   <div className="diary-panel-footer">
                     <span className={`diary-word-count ${editOverLimit ? 'diary-word-count-limit' : ''}`}>

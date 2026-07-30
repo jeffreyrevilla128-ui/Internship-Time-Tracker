@@ -146,7 +146,7 @@
   padding-right: 3rem;
 }
 
-.diary-tts-btn {
+.diary-mic-btn {
   position: absolute;
   top: 0.625rem;
   right: 0.625rem;
@@ -163,48 +163,52 @@
   transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
-.diary-tts-btn:hover:not(:disabled) {
+.diary-mic-btn:hover:not(:disabled) {
   border-color: var(--color-accent);
   color: var(--color-accent);
 }
 
-.diary-tts-btn:disabled {
+.diary-mic-btn:disabled {
   cursor: not-allowed;
   opacity: 0.5;
 }
 
-.diary-tts-btn-active {
-  background-color: var(--color-accent);
-  border-color: var(--color-accent);
+/* Recording state — red rather than the accent teal, so "the mic is live
+   and picking up audio" reads unambiguously at a glance (matches the
+   universal red-dot recording convention, distinct from any of this
+   file's other accent-colored active/selected states). */
+.diary-mic-btn-active {
+  background-color: #dc2626;
+  border-color: #dc2626;
   color: #ffffff;
-  animation: diary-tts-pulse 1.6s ease-in-out infinite;
+  animation: diary-mic-pulse 1.6s ease-in-out infinite;
 }
 
-.diary-tts-btn-active:hover:not(:disabled) {
-  background-color: var(--color-accent);
+.diary-mic-btn-active:hover:not(:disabled) {
+  background-color: #dc2626;
   color: #ffffff;
 }
 
-@keyframes diary-tts-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 var(--color-accent-soft); }
+@keyframes diary-mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(220 38 38 / 0.35); }
   50% { box-shadow: 0 0 0 6px transparent; }
 }
 
-.diary-tts-status {
+.diary-dictation-status {
   margin: 0.5rem 0 0;
   font-size: 0.8125rem;
   color: var(--color-text-muted);
   font-style: italic;
 }
 
-.diary-tts-error {
+.diary-dictation-error {
   margin: 0.5rem 0 0;
   font-size: 0.8125rem;
   color: #dc2626;
   font-weight: 600;
 }
 
-.dashboard-shell[data-theme="dark"] .diary-tts-error {
+.dashboard-shell[data-theme="dark"] .diary-dictation-error {
   color: #f87171;
 }
 
