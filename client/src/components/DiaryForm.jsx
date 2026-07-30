@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { saveDiaryOnly, deleteDiaryEntry } from '../services/attendanceapi';
-import useTextToSpeech from '../hooks/useTextToSpeech';
+import UseSpeechRecognition from '../UsespeechRecognition';
 
 const WORD_LIMIT = 1000;
 
@@ -151,7 +151,7 @@ export default function DiaryForm({ shiftState = {}, setShiftState, logs = [], i
     error: ttsError,
     speak,
     stop: stopSpeaking,
-  } = useTextToSpeech({ lang: 'en-US' });
+  } = UseSpeechRecognition({ lang: 'en-US' });
   const [ttsTarget, setTtsTarget] = useState(null);
 
   // Toggles read-aloud for a given panel ('new' | 'edit'). Tapping the
