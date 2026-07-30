@@ -512,6 +512,63 @@
 }
 
 /* ================================================================= */
+/* 4d. MOBILE HEADER + NAV: SEAMLESS, AUTO-HIDING COMBINED BAR       */
+/* Wraps .app-topbar and Sidebar's <aside> together (see the div in  */
+/* OJTDashboard.jsx) so on small screens they render as one          */
+/* continuous surface directly below the top of the screen, with no  */
+/* border/shadow seam between them, and slide up together as a unit  */
+/* when the person scrolls down, sliding back on scroll up.          */
+/* Entirely scoped to <768px — the 768px reset further down restores */
+/* the topbar and sidebar to two independently fixed elements, exactly*/
+/* as they were before, with zero effect from any of this.           */
+/* ================================================================= */
+@media (max-width: 767px) {
+  .mobile-header-nav-group {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--color-surface);
+    box-shadow: var(--shadow-topbar);
+    transition: transform var(--duration-standard) var(--ease-standard),
+                background-color var(--duration-standard) var(--ease-standard);
+    will-change: transform;
+  }
+
+  /* Toggled from JS on scroll direction — slides the whole group fully
+     off the top of the viewport rather than fading, so it reads as
+     "getting out of the way" rather than disappearing. */
+  .mobile-header-nav-hidden {
+    transform: translateY(-100%);
+  }
+
+  /* The group now owns the fixed position + surface shadow, so its two
+     children collapse into one continuous bar — no visible border,
+     radius, or shadow seam between the header and the nav row beneath. */
+  .mobile-header-nav-group .app-topbar {
+    position: static;
+    border-bottom: none;
+    box-shadow: none;
+  }
+
+  .mobile-header-nav-group .dashboard-sidebar {
+    position: static;
+    border-radius: 0;
+    border-top: none;
+    box-shadow: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-header-nav-group {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ================================================================= */
 /* 5. MAIN CONTENT AREA                                              */
 /* ================================================================= */
 .dashboard-main-content {
@@ -519,8 +576,12 @@
   flex-direction: column;
   min-height: 100vh;
   width: 100%;
-  padding-top: var(--topbar-height);
-  padding-bottom: 75px; /* clearance above mobile bottom navbar */
+  /* Matches the live-measured height of .mobile-header-nav-group (see the
+     ResizeObserver in OJTDashboard.jsx) so content starts exactly where the
+     combined bar ends, however tall it happens to render. The fallback
+     covers the very first paint before that measurement lands. */
+  padding-top: var(--mobile-header-nav-height, 132px);
+  padding-bottom: 0;
   transition: padding var(--duration-standard) var(--ease-standard);
 }
 

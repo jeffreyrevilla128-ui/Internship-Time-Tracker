@@ -235,6 +235,10 @@ export default function OJTDashboard({ user, onLogout }) {
     };
   }, [isProfileMenuOpen]);
 
+  useEffect(() => {
+    if (isProfileMenuOpen) setIsMobileNavHidden(false);
+  }, [isProfileMenuOpen]);
+
   // Closes the menu first, then hands off to whatever the parent wants to
   // do (clear session, redirect to /login, etc.) — kept decoupled from
   // any specific auth implementation.
@@ -249,6 +253,67 @@ export default function OJTDashboard({ user, onLogout }) {
       onLogout();
     }
   };
+
+  // --- Mobile header+nav auto-hide on scroll -------------------------------
+  // On mobile, the topbar and Sidebar are wrapped together (see the
+  // `.mobile-header-nav-group` div in the JSX below) so they read as one
+  // seamless surface and can slide off/on together. Desktop ignores all of
+  // this — see the 768px reset in OJTDashboard.css — since there the topbar
+  // and sidebar are two independently fixed pieces.
+  const [isMobileNavHidden, setIsMobileNavHidden] = useState(false);
+  const mobileHeaderNavRef = useRef(null);
+  const lastScrollYRef = useRef(0);
+
+  useEffect(() => {
+    // Small dead zones avoid the bar twitching on sub-pixel/rubber-band
+    // scroll events (iOS Safari in particular fires these constantly).
+    const HIDE_DELTA = 8;
+    const TOP_REVEAL_ZONE = 12;
+    let ticking = false;
+
+    const handleScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const currentY = window.scrollY;
+        const delta = currentY - lastScrollYRef.current;
+
+        if (currentY <= TOP_REVEAL_ZONE) {
+          setIsMobileNavHidden(false);
+        } else if (delta > HIDE_DELTA) {
+          setIsMobileNavHidden(true); // scrolling down — get out of the way
+        } else if (delta < -HIDE_DELTA) {
+          setIsMobileNavHidden(false); // scrolling up — slide back in
+        }
+
+        lastScrollYRef.current = currentY;
+        ticking = false;
+      });
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Measures the combined header+nav height so the main content's
+  // top padding always matches it exactly, instead of a guessed constant
+  // that drifts if either piece's content/spacing ever changes.
+  useEffect(() => {
+    const node = mobileHeaderNavRef.current;
+    if (!node || typeof ResizeObserver === 'undefined') return;
+
+    const applyHeight = () => {
+      document.documentElement.style.setProperty(
+        '--mobile-header-nav-height',
+        `${node.offsetHeight}px`
+      );
+    };
+
+    applyHeight();
+    const observer = new ResizeObserver(applyHeight);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   // --- Header logo click "spin" animation -----------------------------
   // Mirrors the identical interaction on AuthPage's brand logo (see
@@ -524,6 +589,16 @@ export default function OJTDashboard({ user, onLogout }) {
     // with their own hardcoded colors (like MetricHeader's badges) need an
     // explicit dark-mode override block of their own.
     <div className="dashboard-shell" data-theme={theme}>
+      {/* Header + Sidebar are wrapped together here so that on mobile they
+          read as one seamless bar (no gap/border between them) and slide
+          off/on screen together as the person scrolls. This wrapper is
+          inert on desktop — see the 768px reset in OJTDashboard.css — where
+          the topbar and sidebar go back to being two independently fixed
+          elements, exactly as before. */}
+      <div
+        ref={mobileHeaderNavRef}
+        className={`mobile-header-nav-group${isMobileNavHidden ? ' mobile-header-nav-hidden' : ''}`}
+      >
       {/* Full-width top header bar with branding and responsive right-side profile */}
       <header className="app-topbar">
         <h1 className="dashboard-header-title">
@@ -640,6 +715,7 @@ export default function OJTDashboard({ user, onLogout }) {
 
       {/* Navigational Component */}
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} isConfigComplete={isConfigComplete} />
+      </div>
 
       {/* Main Container Content */}
       <main className="dashboard-main-content">
