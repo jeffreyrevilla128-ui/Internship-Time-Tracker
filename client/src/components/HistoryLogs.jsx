@@ -6,11 +6,305 @@ import {
   upsertAttendanceByDate,
   saveDiaryOnly
 } from '../services/attendanceapi';
+import useSpeechRecognition from '../hooks/UsespeechRecognition';
 
 // How many placeholder rows the skeleton loader shows while the first
 // fetch is in flight. Picked to roughly fill the card without looking
 // like an obviously-fake exact match to real row count.
 const SKELETON_ROW_COUNT = 5;
+
+// Minimal inline mic icon (kept dependency-free, identical glyph to the
+// one used in PunchCard.jsx/DiaryForm.jsx so the mic affordance reads the
+// same everywhere in the app).
+function MicIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M19 11a7 7 0 0 1-14 0M12 18v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// --- Speech-to-time parsing for the Time In / Time Out fields ---
+// Same approach as PunchCard.jsx's parser (duplicated here rather than
+// shared, matching how this codebase already keeps each component's
+// speech-parsing logic local to itself). Converts a spoken phrase such as
+// "eight thirty am", "8:30", "quarter past two pm", "0830", or "noon" into
+// a 24-hour "HH:MM" string — the exact shape these <input type="time">
+// fields already store — or returns null if it can't be confidently parsed.
+const SPOKEN_NUMBER_WORDS = {
+  zero: 0, oh: 0, o: 0,
+  one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9,
+  ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15,
+  sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20,
+  thirty: 30, forty: 40, fifty: 50,
+};
+
+const spokenWordsToNumber = (words) => {
+  let total = 0;
+  let matchedAny = false;
+  for (const word of words) {
+    if (word in SPOKEN_NUMBER_WORDS) {
+      total += SPOKEN_NUMBER_WORDS[word];
+      matchedAny = true;
+    }
+  }
+  return matchedAny ? total : null;
+};
+
+const spokenPhraseToNumber = (phrase) => {
+  const trimmed = phrase.trim();
+  if (!trimmed) return null;
+  if (/^\d+$/.test(trimmed)) return Number(trimmed);
+  return spokenWordsToNumber(trimmed.split(/\s+/).filter(Boolean));
+};
+
+const parseSpokenTimeToHHMM = (rawText) => {
+  if (!rawText) return null;
+
+  let text = rawText.toLowerCase().trim()
+    .replace(/[.,]/g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/(\d)\s*:\s*(\d)/, '$1:$2');
+
+  if (!text) return null;
+
+  if (/\bnoon\b/.test(text)) return '12:00';
+  if (/\bmidnight\b/.test(text)) return '00:00';
+
+  let modifier = null;
+  if (/\b(a\s?m|in the morning)\b/.test(text)) modifier = 'am';
+  if (/\b(p\s?m|in the afternoon|in the evening|at night)\b/.test(text)) modifier = 'pm';
+  text = text
+    .replace(/\ba\s?m\b/g, '')
+    .replace(/\bp\s?m\b/g, '')
+    .replace(/\bin the morning\b/g, '')
+    .replace(/\bin the afternoon\b/g, '')
+    .replace(/\bin the evening\b/g, '')
+    .replace(/\bat night\b/g, '')
+    .trim();
+
+  if (!text) return null;
+
+  let hour = null;
+  let minute = 0;
+
+  let match = text.match(/^(quarter|half)\s+(past|after|to|til|till)\s+(.+)$/);
+  if (match) {
+    const [, unit, direction, hourPhrase] = match;
+    const baseHour = spokenPhraseToNumber(hourPhrase);
+    if (baseHour !== null) {
+      if (unit === 'quarter') {
+        if (direction === 'to' || direction === 'til' || direction === 'till') {
+          hour = baseHour - 1;
+          minute = 45;
+        } else {
+          hour = baseHour;
+          minute = 15;
+        }
+      } else {
+        hour = baseHour;
+        minute = 30;
+      }
+    }
+  }
+
+  if (hour === null) {
+    match = text.match(/^(.+?)\s*o'?\s?clock$/);
+    if (match) {
+      const h = spokenPhraseToNumber(match[1]);
+      if (h !== null) {
+        hour = h;
+        minute = 0;
+      }
+    }
+  }
+
+  if (hour === null) {
+    match = text.match(/^(\d{3,4})$/);
+    if (match) {
+      const digits = match[1];
+      hour = digits.length === 3 ? Number(digits[0]) : Number(digits.slice(0, 2));
+      minute = Number(digits.slice(-2));
+    }
+  }
+
+  if (hour === null) {
+    match = text.match(/^(\d{1,2})[:.\s]+(\d{2})$/);
+    if (match) {
+      hour = Number(match[1]);
+      minute = Number(match[2]);
+    }
+  }
+
+  if (hour === null) {
+    const h = spokenPhraseToNumber(text);
+    if (h !== null && h <= 24) {
+      hour = h;
+      minute = 0;
+    }
+  }
+
+  if (hour === null) {
+    const words = text.split(' ').filter(Boolean);
+    if (words.length >= 2) {
+      const h = spokenPhraseToNumber(words[0]);
+      if (h !== null && h <= 24) {
+        const restPhrase = words.slice(1).join(' ');
+        const m = restPhrase === 'oh' ? 0 : spokenPhraseToNumber(restPhrase);
+        if (m !== null && m < 60) {
+          hour = h;
+          minute = m;
+        }
+      }
+    }
+  }
+
+  if (hour === null) return null;
+
+  if (modifier === 'pm' && hour < 12) hour += 12;
+  if (modifier === 'am' && hour === 12) hour = 0;
+  if (hour > 23 || minute > 59 || hour < 0 || minute < 0) return null;
+
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+};
+
+// --- Speech-to-date parsing for the "Date" field (Add Attendance History
+// modal only — the Update modal's date is fixed to the log being edited).
+// Handles relative phrases ("today", "yesterday"), spelled-out dates
+// ("july 30 2026", "30 july 2026"), and numeric formats ("2026-07-30",
+// "7/30/2026"), resolving to the "YYYY-MM-DD" string the <input type="date">
+// field already expects. Returns null if it can't be confidently parsed.
+const SPOKEN_MONTH_NAMES = {
+  january: 0, jan: 0, february: 1, feb: 1, march: 2, mar: 2, april: 3, apr: 3,
+  may: 4, june: 5, jun: 5, july: 6, jul: 6, august: 7, aug: 7,
+  september: 8, sept: 8, sep: 8, october: 9, oct: 9, november: 10, nov: 10,
+  december: 11, dec: 11,
+};
+
+const toISODate = (year, monthIndex, day) => {
+  const d = new Date(year, monthIndex, day);
+  // Guards against nonsense like "february 31" silently rolling over into
+  // March — if the constructed date doesn't land back on the day we asked
+  // for, the input wasn't a valid calendar date.
+  if (d.getFullYear() !== year || d.getMonth() !== monthIndex || d.getDate() !== day) return null;
+  return `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+};
+
+const parseSpokenDateToISO = (rawText) => {
+  if (!rawText) return null;
+
+  const text = rawText.toLowerCase().trim()
+    .replace(/[.,]/g, ' ')
+    .replace(/\b(\d+)(st|nd|rd|th)\b/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!text) return null;
+
+  const now = new Date();
+
+  if (/\btoday\b/.test(text)) {
+    return toISODate(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+  if (/\byesterday\b/.test(text)) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - 1);
+    return toISODate(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+
+  let match = text.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+  if (match) {
+    const [, y, mo, d] = match;
+    return toISODate(Number(y), Number(mo) - 1, Number(d));
+  }
+
+  match = text.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+  if (match) {
+    const [, mo, d, y] = match;
+    return toISODate(Number(y), Number(mo) - 1, Number(d));
+  }
+
+  match = text.match(/^([a-z]+)\s+(\d{1,2})(?:\s+(\d{4}))?$/);
+  if (match) {
+    const [, monthWord, dayStr, yearStr] = match;
+    const monthIndex = SPOKEN_MONTH_NAMES[monthWord];
+    if (monthIndex !== undefined) {
+      const year = yearStr ? Number(yearStr) : now.getFullYear();
+      return toISODate(year, monthIndex, Number(dayStr));
+    }
+  }
+
+  match = text.match(/^(\d{1,2})\s+([a-z]+)(?:\s+(\d{4}))?$/);
+  if (match) {
+    const [, dayStr, monthWord, yearStr] = match;
+    const monthIndex = SPOKEN_MONTH_NAMES[monthWord];
+    if (monthIndex !== undefined) {
+      const year = yearStr ? Number(yearStr) : now.getFullYear();
+      return toISODate(year, monthIndex, Number(dayStr));
+    }
+  }
+
+  return null;
+};
+
+// Time In / Time Out input paired with its own mic button, status line, and
+// error line — used for all 4 shift fields in both the Update and Add
+// modals so the mic wiring isn't duplicated 8 separate times.
+function TimeFieldWithMic({
+  label,
+  inputRef,
+  max,
+  value,
+  onChange,
+  onFocus,
+  onBlur,
+  isMicSupported,
+  isMicActive,
+  isMicDisabled,
+  micInterimTranscript,
+  micError,
+  onToggleMic,
+}) {
+  return (
+    <div className="form-input-field" onClick={(e) => e.stopPropagation()}>
+      <label>{label}</label>
+      <div className="field-input-mic-row">
+        <input
+          ref={inputRef}
+          type="time"
+          max={max}
+          value={value || ''}
+          onChange={onChange}
+          onFocus={onFocus}
+          onBlur={onBlur}
+        />
+        {isMicSupported && (
+          <button
+            type="button"
+            className={`field-mic-btn${isMicActive ? ' field-mic-btn-active' : ''}`}
+            onClick={onToggleMic}
+            disabled={isMicDisabled}
+            aria-label={isMicActive ? `Stop voice input for ${label}` : `Say the ${label}`}
+            title={
+              isMicActive
+                ? 'Stop voice input'
+                : `Say the ${label.toLowerCase()}, e.g. "8:30 AM"`
+            }
+          >
+            <MicIcon />
+          </button>
+        )}
+      </div>
+      {isMicActive && (
+        <p className="field-mic-status">🎙️ Listening… {micInterimTranscript}</p>
+      )}
+      {micError && (
+        <p className="field-mic-error" role="alert">⚠️ {micError}</p>
+      )}
+    </div>
+  );
+}
 
 export default function HistoryLogs({ logs, setLogs, startDate }) {
   // Search and Filter State Managers
@@ -48,6 +342,182 @@ export default function HistoryLogs({ logs, setLogs, startDate }) {
   const pmInputRef = useRef(null);
   const diaryInputRef = useRef(null);
 
+  // --- Voice input: structured fields (Time In/Out + Date) ---
+  // One shared mic instance for every Time In / Time Out field across both
+  // the Update and Add modals, plus the Add modal's Date field — they're
+  // all single short utterances, so continuous:false lets the engine stop
+  // naturally after each one instead of staying hot like free dictation.
+  // `activeFieldMic` tracks which field is listening, encoded as
+  // "scope:field" (e.g. "update:amIn", "add:date"), since only one of
+  // these fields is ever being spoken into at a time.
+  const {
+    transcript: fieldSpeechTranscript,
+    interimTranscript: fieldInterimTranscript,
+    isListening: isFieldMicListening,
+    isSupported: isFieldMicSupported,
+    error: fieldMicRawError,
+    startListening: startFieldListening,
+    stopListening: stopFieldListening,
+    resetTranscript: resetFieldTranscript,
+  } = useSpeechRecognition({ continuous: false, lang: 'en-US' });
+  const [activeFieldMic, setActiveFieldMic] = useState(null);
+  // Set when a transcript came back but couldn't be parsed as a time/date,
+  // so the person knows to rephrase rather than wondering why nothing happened.
+  const [fieldParseError, setFieldParseError] = useState(null);
+  // Local copy of the hook's raw recognition error — mirrored via effect
+  // rather than read directly, so a stale error from a previous attempt
+  // can't linger on screen after a later attempt succeeds (same reasoning
+  // as PunchCard's timeMicDisplayError).
+  const [fieldMicDisplayError, setFieldMicDisplayError] = useState(null);
+
+  // --- Voice input: free-form Diary dictation ---
+  // Separate instance from the field mic above (continuous:true — an
+  // open-ended dictation session rather than one short utterance), shared
+  // between the Update modal's and Add modal's diary textareas via
+  // `diaryMicScope` ('update' | 'add' | null).
+  const {
+    transcript: diarySpeechTranscript,
+    interimTranscript: diaryInterimTranscript,
+    isListening: isDiaryMicListening,
+    isSupported: isDiaryMicSupported,
+    error: diaryMicError,
+    startListening: startDiaryListening,
+    stopListening: stopDiaryListening,
+    resetTranscript: resetDiaryTranscript,
+  } = useSpeechRecognition({ continuous: true, lang: 'en-US' });
+  const [diaryMicScope, setDiaryMicScope] = useState(null);
+  // Snapshot of whatever text was already in the diary textarea the moment
+  // dictation started, so spoken words are appended after it instead of
+  // replacing it.
+  const diaryBaseTextRef = useRef('');
+
+  // Only one voice session (field or diary) is allowed at a time, so every
+  // mic button outside the currently-active one disables itself instead of
+  // letting a second engine try to run concurrently.
+  const anyMicActive = isFieldMicListening || isDiaryMicListening;
+
+  const handleToggleFieldMic = (scope, field) => {
+    const key = `${scope}:${field}`;
+    if (isFieldMicListening && activeFieldMic === key) {
+      stopFieldListening();
+      setActiveFieldMic(null);
+      return;
+    }
+    setFieldParseError(null);
+    setFieldMicDisplayError(null);
+    setActiveFieldMic(key);
+    resetFieldTranscript();
+    startFieldListening();
+  };
+
+  // Parses each recognized utterance as a date (for the "date" field) or a
+  // time (everything else) and writes it straight into the matching form.
+  useEffect(() => {
+    if (!fieldSpeechTranscript || !activeFieldMic) return;
+    const [scope, field] = activeFieldMic.split(':');
+    const raw = fieldSpeechTranscript.trim();
+
+    if (field === 'date') {
+      const parsedISO = parseSpokenDateToISO(raw);
+      if (parsedISO) {
+        setFieldParseError(null);
+        setFieldMicDisplayError(null);
+        handleAddFormChange('date', parsedISO);
+      } else {
+        setFieldParseError(`Didn't catch a date in "${raw}" — try saying it like "July 30 2026" or "today".`);
+      }
+      return;
+    }
+
+    const parsedTime = parseSpokenTimeToHHMM(raw);
+    if (parsedTime) {
+      setFieldParseError(null);
+      setFieldMicDisplayError(null);
+      if (scope === 'update') {
+        handleFormChange(field, parsedTime);
+      } else {
+        handleAddFormChange(field, parsedTime);
+      }
+    } else {
+      setFieldParseError(`Didn't catch a time in "${raw}" — try saying it like "8:30 AM".`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fieldSpeechTranscript]);
+
+  // Mirrors a fresh raw recognition error into the locally-controlled copy
+  // — only fires when the hook's error actually changes, so a stale error
+  // left over from a previous, since-succeeded attempt never re-appears on
+  // its own.
+  useEffect(() => {
+    if (fieldMicRawError) setFieldMicDisplayError(fieldMicRawError);
+  }, [fieldMicRawError]);
+
+  const handleToggleDiaryMic = (scope, currentText) => {
+    if (isDiaryMicListening && diaryMicScope === scope) {
+      stopDiaryListening();
+      setDiaryMicScope(null);
+      return;
+    }
+    diaryBaseTextRef.current = currentText;
+    resetDiaryTranscript();
+    setDiaryMicScope(scope);
+    startDiaryListening();
+  };
+
+  // Merges each new finalized speech chunk onto the pre-dictation base text.
+  useEffect(() => {
+    if (!diarySpeechTranscript || !diaryMicScope) return;
+    const base = diaryBaseTextRef.current;
+    const merged = base
+      ? (base.endsWith('\n') || base.endsWith(' ') ? `${base}${diarySpeechTranscript}` : `${base} ${diarySpeechTranscript}`)
+      : diarySpeechTranscript;
+    if (diaryMicScope === 'update') {
+      handleFormChange('diaryText', merged);
+    } else {
+      handleAddFormChange('diaryText', merged);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [diarySpeechTranscript, diaryMicScope]);
+
+  // Release the Update modal's mic sessions the moment it closes, so a
+  // background mic can't linger after the form disappears.
+  useEffect(() => {
+    if (!activeUpdateLog) {
+      if (activeFieldMic?.startsWith('update:')) {
+        stopFieldListening();
+        resetFieldTranscript();
+        setActiveFieldMic(null);
+        setFieldParseError(null);
+        setFieldMicDisplayError(null);
+      }
+      if (diaryMicScope === 'update') {
+        stopDiaryListening();
+        resetDiaryTranscript();
+        setDiaryMicScope(null);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeUpdateLog]);
+
+  // Same cleanup for the Add modal.
+  useEffect(() => {
+    if (!isAddModalOpen) {
+      if (activeFieldMic?.startsWith('add:')) {
+        stopFieldListening();
+        resetFieldTranscript();
+        setActiveFieldMic(null);
+        setFieldParseError(null);
+        setFieldMicDisplayError(null);
+      }
+      if (diaryMicScope === 'add') {
+        stopDiaryListening();
+        resetDiaryTranscript();
+        setDiaryMicScope(null);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAddModalOpen]);
+
   const isFormDirty = () => {
     if (!activeUpdateLog) return false;
     return (
@@ -79,6 +549,14 @@ export default function HistoryLogs({ logs, setLogs, startDate }) {
 
   const handleFormChange = (field, value) => {
     setUpdateFormData(prev => ({ ...prev, [field]: value }));
+    if (activeFieldMic === `update:${field}`) {
+      stopFieldListening();
+      setActiveFieldMic(null);
+    }
+    if (field === 'diaryText' && diaryMicScope === 'update') {
+      stopDiaryListening();
+      setDiaryMicScope(null);
+    }
   };
 
   // Looked up from `logs` (already in memory — no extra fetch needed) so
@@ -110,6 +588,14 @@ export default function HistoryLogs({ logs, setLogs, startDate }) {
 
   const handleAddFormChange = (field, value) => {
     setAddFormData(prev => ({ ...prev, [field]: value }));
+    if (activeFieldMic === `add:${field}`) {
+      stopFieldListening();
+      setActiveFieldMic(null);
+    }
+    if (field === 'diaryText' && diaryMicScope === 'add') {
+      stopDiaryListening();
+      setDiaryMicScope(null);
+    }
   };
 
   const loadAttendanceLogs = async () => {
@@ -583,28 +1069,34 @@ export default function HistoryLogs({ logs, setLogs, startDate }) {
                     onClick={() => amInputRef.current?.focus()}
                   >
                     <h5 className="form-section-heading">🌅 Morning Shift (AM)</h5>
-                    <div className="form-input-field" onClick={(e) => e.stopPropagation()}>
-                      <label>Time In</label>
-                      <input 
-                        ref={amInputRef}
-                        type="time" 
-                        max="11:59" 
-                        value={updateFormData.amIn || ''} 
-                        onChange={(e) => handleFormChange('amIn', e.target.value)} 
-                        onFocus={() => setActiveShiftField('AM')}
-                        onBlur={() => setActiveShiftField(null)}
-                      />
-                    </div>
-                    <div className="form-input-field" onClick={(e) => e.stopPropagation()}>
-                      <label>Time Out</label>
-                      <input 
-                        type="time" 
-                        value={updateFormData.amOut || ''} 
-                        onChange={(e) => handleFormChange('amOut', e.target.value)} 
-                        onFocus={() => setActiveShiftField('AM')}
-                        onBlur={() => setActiveShiftField(null)}
-                      />
-                    </div>
+                    <TimeFieldWithMic
+                      label="Time In"
+                      inputRef={amInputRef}
+                      max="11:59"
+                      value={updateFormData.amIn}
+                      onChange={(e) => handleFormChange('amIn', e.target.value)}
+                      onFocus={() => setActiveShiftField('AM')}
+                      onBlur={() => setActiveShiftField(null)}
+                      isMicSupported={isFieldMicSupported}
+                      isMicActive={isFieldMicListening && activeFieldMic === 'update:amIn'}
+                      isMicDisabled={anyMicActive && !(isFieldMicListening && activeFieldMic === 'update:amIn')}
+                      micInterimTranscript={fieldInterimTranscript}
+                      micError={activeFieldMic === 'update:amIn' ? (fieldParseError || fieldMicDisplayError) : null}
+                      onToggleMic={() => handleToggleFieldMic('update', 'amIn')}
+                    />
+                    <TimeFieldWithMic
+                      label="Time Out"
+                      value={updateFormData.amOut}
+                      onChange={(e) => handleFormChange('amOut', e.target.value)}
+                      onFocus={() => setActiveShiftField('AM')}
+                      onBlur={() => setActiveShiftField(null)}
+                      isMicSupported={isFieldMicSupported}
+                      isMicActive={isFieldMicListening && activeFieldMic === 'update:amOut'}
+                      isMicDisabled={anyMicActive && !(isFieldMicListening && activeFieldMic === 'update:amOut')}
+                      micInterimTranscript={fieldInterimTranscript}
+                      micError={activeFieldMic === 'update:amOut' ? (fieldParseError || fieldMicDisplayError) : null}
+                      onToggleMic={() => handleToggleFieldMic('update', 'amOut')}
+                    />
                   </div>
 
                   <div 
@@ -614,27 +1106,33 @@ export default function HistoryLogs({ logs, setLogs, startDate }) {
                     onClick={() => pmInputRef.current?.focus()}
                   >
                     <h5 className="form-section-heading">🌤️ Afternoon Shift (PM)</h5>
-                    <div className="form-input-field" onClick={(e) => e.stopPropagation()}>
-                      <label>Time In</label>
-                      <input 
-                        ref={pmInputRef}
-                        type="time" 
-                        value={updateFormData.pmIn || ''} 
-                        onChange={(e) => handleFormChange('pmIn', e.target.value)} 
-                        onFocus={() => setActiveShiftField('PM')}
-                        onBlur={() => setActiveShiftField(null)}
-                      />
-                    </div>
-                    <div className="form-input-field" onClick={(e) => e.stopPropagation()}>
-                      <label>Time Out</label>
-                      <input 
-                        type="time" 
-                        value={updateFormData.pmOut || ''} 
-                        onChange={(e) => handleFormChange('pmOut', e.target.value)} 
-                        onFocus={() => setActiveShiftField('PM')}
-                        onBlur={() => setActiveShiftField(null)}
-                      />
-                    </div>
+                    <TimeFieldWithMic
+                      label="Time In"
+                      inputRef={pmInputRef}
+                      value={updateFormData.pmIn}
+                      onChange={(e) => handleFormChange('pmIn', e.target.value)}
+                      onFocus={() => setActiveShiftField('PM')}
+                      onBlur={() => setActiveShiftField(null)}
+                      isMicSupported={isFieldMicSupported}
+                      isMicActive={isFieldMicListening && activeFieldMic === 'update:pmIn'}
+                      isMicDisabled={anyMicActive && !(isFieldMicListening && activeFieldMic === 'update:pmIn')}
+                      micInterimTranscript={fieldInterimTranscript}
+                      micError={activeFieldMic === 'update:pmIn' ? (fieldParseError || fieldMicDisplayError) : null}
+                      onToggleMic={() => handleToggleFieldMic('update', 'pmIn')}
+                    />
+                    <TimeFieldWithMic
+                      label="Time Out"
+                      value={updateFormData.pmOut}
+                      onChange={(e) => handleFormChange('pmOut', e.target.value)}
+                      onFocus={() => setActiveShiftField('PM')}
+                      onBlur={() => setActiveShiftField(null)}
+                      isMicSupported={isFieldMicSupported}
+                      isMicActive={isFieldMicListening && activeFieldMic === 'update:pmOut'}
+                      isMicDisabled={anyMicActive && !(isFieldMicListening && activeFieldMic === 'update:pmOut')}
+                      micInterimTranscript={fieldInterimTranscript}
+                      micError={activeFieldMic === 'update:pmOut' ? (fieldParseError || fieldMicDisplayError) : null}
+                      onToggleMic={() => handleToggleFieldMic('update', 'pmOut')}
+                    />
                   </div>
                 </div>
 
@@ -647,16 +1145,36 @@ export default function HistoryLogs({ logs, setLogs, startDate }) {
                   <h5 className="form-section-heading">📝 Accomplishment Summary</h5>
                   <div className="form-textarea-field" onClick={(e) => e.stopPropagation()}>
                     <label>Narrative Diary Summary</label>
-                    <textarea 
-                      ref={diaryInputRef}
-                      value={updateFormData.diaryText || ''} 
-                      onChange={(e) => handleFormChange('diaryText', e.target.value)} 
-                      rows={4} 
-                      onFocus={() => setActiveShiftField('DIARY')}
-                      onBlur={() => setActiveShiftField(null)}
-                      placeholder="Describe your primary technical operations, accomplishments..."
-                      required
-                    />
+                    <div className="textarea-mic-row">
+                      <textarea 
+                        ref={diaryInputRef}
+                        value={updateFormData.diaryText || ''} 
+                        onChange={(e) => handleFormChange('diaryText', e.target.value)} 
+                        rows={4} 
+                        onFocus={() => setActiveShiftField('DIARY')}
+                        onBlur={() => setActiveShiftField(null)}
+                        placeholder="Describe your primary technical operations, accomplishments..."
+                        required
+                      />
+                      {isDiaryMicSupported && (
+                        <button
+                          type="button"
+                          className={`field-mic-btn${isDiaryMicListening && diaryMicScope === 'update' ? ' field-mic-btn-active' : ''}`}
+                          onClick={() => handleToggleDiaryMic('update', updateFormData.diaryText || '')}
+                          disabled={anyMicActive && !(isDiaryMicListening && diaryMicScope === 'update')}
+                          aria-label={isDiaryMicListening && diaryMicScope === 'update' ? 'Stop voice dictation' : 'Dictate summary by speaking'}
+                          title={isDiaryMicListening && diaryMicScope === 'update' ? 'Stop voice dictation' : 'Dictate by speaking'}
+                        >
+                          <MicIcon />
+                        </button>
+                      )}
+                    </div>
+                    {isDiaryMicListening && diaryMicScope === 'update' && (
+                      <p className="field-mic-status">🎙️ Listening… {diaryInterimTranscript}</p>
+                    )}
+                    {diaryMicScope === 'update' && diaryMicError && (
+                      <p className="field-mic-error" role="alert">⚠️ {diaryMicError}</p>
+                    )}
                   </div>
                 </div>
                 </div>
@@ -691,18 +1209,42 @@ export default function HistoryLogs({ logs, setLogs, startDate }) {
               <div className="modal-card-body modal-form-scrollable">
                 <div className="form-input-field date-field-card">
                   <label htmlFor="add-history-date">📅 Date</label>
-                  <input
-                    id="add-history-date"
-                    type="date"
-                    value={addFormData.date}
-                    onChange={(e) => handleAddFormChange('date', e.target.value)}
-                    min={startDate || undefined}
-                    max={todayISO}
-                    required
-                    aria-invalid={isAddDateInFuture || isAddDateBeforeStart}
-                    aria-describedby={(isAddDateInFuture || isAddDateBeforeStart) ? 'add-history-date-error' : undefined}
-                    className={(isAddDateInFuture || isAddDateBeforeStart) ? 'field-input-error' : undefined}
-                  />
+                  <div className="field-input-mic-row">
+                    <input
+                      id="add-history-date"
+                      type="date"
+                      value={addFormData.date}
+                      onChange={(e) => handleAddFormChange('date', e.target.value)}
+                      min={startDate || undefined}
+                      max={todayISO}
+                      required
+                      aria-invalid={isAddDateInFuture || isAddDateBeforeStart}
+                      aria-describedby={(isAddDateInFuture || isAddDateBeforeStart) ? 'add-history-date-error' : undefined}
+                      className={(isAddDateInFuture || isAddDateBeforeStart) ? 'field-input-error' : undefined}
+                    />
+                    {isFieldMicSupported && (
+                      <button
+                        type="button"
+                        className={`field-mic-btn${isFieldMicListening && activeFieldMic === 'add:date' ? ' field-mic-btn-active' : ''}`}
+                        onClick={() => handleToggleFieldMic('add', 'date')}
+                        disabled={anyMicActive && !(isFieldMicListening && activeFieldMic === 'add:date')}
+                        aria-label={isFieldMicListening && activeFieldMic === 'add:date' ? 'Stop voice input for Date' : 'Say the date'}
+                        title={
+                          isFieldMicListening && activeFieldMic === 'add:date'
+                            ? 'Stop voice input'
+                            : 'Say the date, e.g. "July 30 2026" or "today"'
+                        }
+                      >
+                        <MicIcon />
+                      </button>
+                    )}
+                  </div>
+                  {isFieldMicListening && activeFieldMic === 'add:date' && (
+                    <p className="field-mic-status">🎙️ Listening… {fieldInterimTranscript}</p>
+                  )}
+                  {activeFieldMic === 'add:date' && (fieldParseError || fieldMicDisplayError) && (
+                    <p className="field-mic-error" role="alert">⚠️ {fieldParseError || fieldMicDisplayError}</p>
+                  )}
                   {isAddDateInFuture && (
                     <p id="add-history-date-error" className="field-error-text">
                       ⚠️ Attendance date can't be in the future.
@@ -730,28 +1272,34 @@ export default function HistoryLogs({ logs, setLogs, startDate }) {
                     onClick={() => addAmInputRef.current?.focus()}
                   >
                     <h5 className="form-section-heading">🌅 Morning Shift (AM)</h5>
-                    <div className="form-input-field" onClick={(e) => e.stopPropagation()}>
-                      <label>Time In</label>
-                      <input
-                        ref={addAmInputRef}
-                        type="time"
-                        max="11:59"
-                        value={addFormData.amIn || ''}
-                        onChange={(e) => handleAddFormChange('amIn', e.target.value)}
-                        onFocus={() => setActiveAddShiftField('AM')}
-                        onBlur={() => setActiveAddShiftField(null)}
-                      />
-                    </div>
-                    <div className="form-input-field" onClick={(e) => e.stopPropagation()}>
-                      <label>Time Out</label>
-                      <input
-                        type="time"
-                        value={addFormData.amOut || ''}
-                        onChange={(e) => handleAddFormChange('amOut', e.target.value)}
-                        onFocus={() => setActiveAddShiftField('AM')}
-                        onBlur={() => setActiveAddShiftField(null)}
-                      />
-                    </div>
+                    <TimeFieldWithMic
+                      label="Time In"
+                      inputRef={addAmInputRef}
+                      max="11:59"
+                      value={addFormData.amIn}
+                      onChange={(e) => handleAddFormChange('amIn', e.target.value)}
+                      onFocus={() => setActiveAddShiftField('AM')}
+                      onBlur={() => setActiveAddShiftField(null)}
+                      isMicSupported={isFieldMicSupported}
+                      isMicActive={isFieldMicListening && activeFieldMic === 'add:amIn'}
+                      isMicDisabled={anyMicActive && !(isFieldMicListening && activeFieldMic === 'add:amIn')}
+                      micInterimTranscript={fieldInterimTranscript}
+                      micError={activeFieldMic === 'add:amIn' ? (fieldParseError || fieldMicDisplayError) : null}
+                      onToggleMic={() => handleToggleFieldMic('add', 'amIn')}
+                    />
+                    <TimeFieldWithMic
+                      label="Time Out"
+                      value={addFormData.amOut}
+                      onChange={(e) => handleAddFormChange('amOut', e.target.value)}
+                      onFocus={() => setActiveAddShiftField('AM')}
+                      onBlur={() => setActiveAddShiftField(null)}
+                      isMicSupported={isFieldMicSupported}
+                      isMicActive={isFieldMicListening && activeFieldMic === 'add:amOut'}
+                      isMicDisabled={anyMicActive && !(isFieldMicListening && activeFieldMic === 'add:amOut')}
+                      micInterimTranscript={fieldInterimTranscript}
+                      micError={activeFieldMic === 'add:amOut' ? (fieldParseError || fieldMicDisplayError) : null}
+                      onToggleMic={() => handleToggleFieldMic('add', 'amOut')}
+                    />
                   </div>
 
                   <div
@@ -761,27 +1309,33 @@ export default function HistoryLogs({ logs, setLogs, startDate }) {
                     onClick={() => addPmInputRef.current?.focus()}
                   >
                     <h5 className="form-section-heading">🌤️ Afternoon Shift (PM)</h5>
-                    <div className="form-input-field" onClick={(e) => e.stopPropagation()}>
-                      <label>Time In</label>
-                      <input
-                        ref={addPmInputRef}
-                        type="time"
-                        value={addFormData.pmIn || ''}
-                        onChange={(e) => handleAddFormChange('pmIn', e.target.value)}
-                        onFocus={() => setActiveAddShiftField('PM')}
-                        onBlur={() => setActiveAddShiftField(null)}
-                      />
-                    </div>
-                    <div className="form-input-field" onClick={(e) => e.stopPropagation()}>
-                      <label>Time Out</label>
-                      <input
-                        type="time"
-                        value={addFormData.pmOut || ''}
-                        onChange={(e) => handleAddFormChange('pmOut', e.target.value)}
-                        onFocus={() => setActiveAddShiftField('PM')}
-                        onBlur={() => setActiveAddShiftField(null)}
-                      />
-                    </div>
+                    <TimeFieldWithMic
+                      label="Time In"
+                      inputRef={addPmInputRef}
+                      value={addFormData.pmIn}
+                      onChange={(e) => handleAddFormChange('pmIn', e.target.value)}
+                      onFocus={() => setActiveAddShiftField('PM')}
+                      onBlur={() => setActiveAddShiftField(null)}
+                      isMicSupported={isFieldMicSupported}
+                      isMicActive={isFieldMicListening && activeFieldMic === 'add:pmIn'}
+                      isMicDisabled={anyMicActive && !(isFieldMicListening && activeFieldMic === 'add:pmIn')}
+                      micInterimTranscript={fieldInterimTranscript}
+                      micError={activeFieldMic === 'add:pmIn' ? (fieldParseError || fieldMicDisplayError) : null}
+                      onToggleMic={() => handleToggleFieldMic('add', 'pmIn')}
+                    />
+                    <TimeFieldWithMic
+                      label="Time Out"
+                      value={addFormData.pmOut}
+                      onChange={(e) => handleAddFormChange('pmOut', e.target.value)}
+                      onFocus={() => setActiveAddShiftField('PM')}
+                      onBlur={() => setActiveAddShiftField(null)}
+                      isMicSupported={isFieldMicSupported}
+                      isMicActive={isFieldMicListening && activeFieldMic === 'add:pmOut'}
+                      isMicDisabled={anyMicActive && !(isFieldMicListening && activeFieldMic === 'add:pmOut')}
+                      micInterimTranscript={fieldInterimTranscript}
+                      micError={activeFieldMic === 'add:pmOut' ? (fieldParseError || fieldMicDisplayError) : null}
+                      onToggleMic={() => handleToggleFieldMic('add', 'pmOut')}
+                    />
                   </div>
                 </div>
 
@@ -794,15 +1348,35 @@ export default function HistoryLogs({ logs, setLogs, startDate }) {
                   <h5 className="form-section-heading">📝 Accomplishment Summary</h5>
                   <div className="form-textarea-field" onClick={(e) => e.stopPropagation()}>
                     <label>Narrative Diary Summary (optional)</label>
-                    <textarea
-                      ref={addDiaryInputRef}
-                      value={addFormData.diaryText || ''}
-                      onChange={(e) => handleAddFormChange('diaryText', e.target.value)}
-                      rows={4}
-                      onFocus={() => setActiveAddShiftField('DIARY')}
-                      onBlur={() => setActiveAddShiftField(null)}
-                      placeholder="Describe your primary technical operations, accomplishments..."
-                    />
+                    <div className="textarea-mic-row">
+                      <textarea
+                        ref={addDiaryInputRef}
+                        value={addFormData.diaryText || ''}
+                        onChange={(e) => handleAddFormChange('diaryText', e.target.value)}
+                        rows={4}
+                        onFocus={() => setActiveAddShiftField('DIARY')}
+                        onBlur={() => setActiveAddShiftField(null)}
+                        placeholder="Describe your primary technical operations, accomplishments..."
+                      />
+                      {isDiaryMicSupported && (
+                        <button
+                          type="button"
+                          className={`field-mic-btn${isDiaryMicListening && diaryMicScope === 'add' ? ' field-mic-btn-active' : ''}`}
+                          onClick={() => handleToggleDiaryMic('add', addFormData.diaryText || '')}
+                          disabled={anyMicActive && !(isDiaryMicListening && diaryMicScope === 'add')}
+                          aria-label={isDiaryMicListening && diaryMicScope === 'add' ? 'Stop voice dictation' : 'Dictate summary by speaking'}
+                          title={isDiaryMicListening && diaryMicScope === 'add' ? 'Stop voice dictation' : 'Dictate by speaking'}
+                        >
+                          <MicIcon />
+                        </button>
+                      )}
+                    </div>
+                    {isDiaryMicListening && diaryMicScope === 'add' && (
+                      <p className="field-mic-status">🎙️ Listening… {diaryInterimTranscript}</p>
+                    )}
+                    {diaryMicScope === 'add' && diaryMicError && (
+                      <p className="field-mic-error" role="alert">⚠️ {diaryMicError}</p>
+                    )}
                   </div>
                 </div>
                 </div>

@@ -687,6 +687,96 @@
 .form-textarea-field textarea { width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: 0.5rem; font-size: 0.875rem; font-family: inherit; color: var(--color-text); background-color: var(--color-surface); resize: vertical; line-height: 1.5; }
 .form-textarea-field textarea:focus, .form-input-field input:focus { outline: none; border-color: var(--color-accent); }
 
+/* ================================================================= */
+/* VOICE INPUT — mic button + status/error rows for the Update/Add    */
+/* modals' Time In/Out, Date, and Diary fields. Same visual language   */
+/* (red pulsing "listening" state) as PunchCard.css/DiaryForm.css's    */
+/* own mic buttons, duplicated here rather than shared since each of   */
+/* this app's components already keeps its own copy of this styling.  */
+/* ================================================================= */
+.field-input-mic-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.field-input-mic-row input[type="time"],
+.field-input-mic-row input[type="date"] {
+  flex: 1;
+  min-width: 0;
+}
+
+.textarea-mic-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.textarea-mic-row textarea {
+  flex: 1;
+  min-width: 0;
+}
+
+.field-mic-btn {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.field-mic-btn:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.field-mic-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.field-mic-btn-active {
+  background-color: #dc2626;
+  border-color: #dc2626;
+  color: #ffffff;
+  animation: history-mic-pulse 1.6s ease-in-out infinite;
+}
+
+.field-mic-btn-active:hover:not(:disabled) {
+  background-color: #dc2626;
+  color: #ffffff;
+}
+
+@keyframes history-mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.35); }
+  50% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); }
+}
+
+.field-mic-status {
+  margin: 0.375rem 0 0;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.field-mic-error {
+  margin: 0.375rem 0 0;
+  font-size: 0.75rem;
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.dashboard-shell[data-theme="dark"] .field-mic-error {
+  color: #f87171;
+}
+
 /* Inline validation error — e.g. Add Attendance History's Date field
    rejecting a future date. Red, distinct from the amber "attention" tone
    used for .existing-record-notice/.modal-input-warning, since this is a
