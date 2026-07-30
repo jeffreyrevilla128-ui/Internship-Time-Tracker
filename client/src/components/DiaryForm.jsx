@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { saveDiaryOnly, deleteDiaryEntry } from '../services/attendanceapi';
-import UseSpeechRecognition from '../UsespeechRecognition';
+import UseSpeechRecognition from '../hooks/UsespeechRecognition';
 
 const WORD_LIMIT = 1000;
 
