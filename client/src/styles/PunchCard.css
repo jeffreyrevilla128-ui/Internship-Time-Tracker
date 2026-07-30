@@ -681,6 +681,73 @@
   box-shadow: 0 0 0 3px var(--color-accent-soft);
 }
 
+.time-entry-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.time-entry-input-row .time-entry-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.time-entry-mic-btn {
+  flex-shrink: 0;
+  width: 2.375rem;
+  height: 2.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.time-entry-mic-btn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.time-entry-mic-btn-active {
+  background-color: #dc2626;
+  border-color: #dc2626;
+  color: #ffffff;
+  animation: diary-mic-pulse 1.6s ease-in-out infinite;
+}
+
+.time-entry-mic-btn-active:hover {
+  background-color: #dc2626;
+  color: #ffffff;
+}
+
+.time-entry-mic-status {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.time-entry-mic-status strong {
+  font-style: normal;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.time-entry-mic-error {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.dashboard-shell[data-theme="dark"] .time-entry-mic-error {
+  color: #f87171;
+}
+
 .time-entry-actions {
   display: flex;
   gap: 0.5rem;

@@ -138,6 +138,76 @@
   box-shadow: 0 0 0 3px var(--color-accent-soft);
 }
 
+.diary-textarea-wrap {
+  position: relative;
+}
+
+.diary-textarea-wrap .diary-textarea {
+  padding-right: 3rem;
+}
+
+.diary-tts-btn {
+  position: absolute;
+  top: 0.625rem;
+  right: 0.625rem;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.diary-tts-btn:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.diary-tts-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.diary-tts-btn-active {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #ffffff;
+  animation: diary-tts-pulse 1.6s ease-in-out infinite;
+}
+
+.diary-tts-btn-active:hover:not(:disabled) {
+  background-color: var(--color-accent);
+  color: #ffffff;
+}
+
+@keyframes diary-tts-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--color-accent-soft); }
+  50% { box-shadow: 0 0 0 6px transparent; }
+}
+
+.diary-tts-status {
+  margin: 0.5rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.diary-tts-error {
+  margin: 0.5rem 0 0;
+  font-size: 0.8125rem;
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.dashboard-shell[data-theme="dark"] .diary-tts-error {
+  color: #f87171;
+}
+
 .diary-panel-footer {
   display: flex;
   align-items: center;

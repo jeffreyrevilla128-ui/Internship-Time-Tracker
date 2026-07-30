@@ -1,7 +1,22 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { saveDiaryOnly, deleteDiaryEntry } from '../services/attendanceapi';
+import useTextToSpeech from '../hooks/useTextToSpeech';
 
 const WORD_LIMIT = 1000;
+
+// Minimal inline speaker icon (kept dependency-free, mirrors PunchCard's MicIcon)
+function SpeakerIcon({ active }) {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4 9v6h4l5 4V5L8 9H4Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      {active ? (
+        <path d="M18 8a6 6 0 0 1 0 8M15 10.5a2.5 2.5 0 0 1 0 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      ) : (
+        <path d="M16 9a4 4 0 0 1 0 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      )}
+    </svg>
+  );
+}
 
 // How many placeholder entry cards the skeleton loader shows while
 // shiftState/logs are still being fetched by the parent.
@@ -126,6 +141,42 @@ export default function DiaryForm({ shiftState = {}, setShiftState, logs = [], i
   const [isSavingEntry, setIsSavingEntry] = useState(false);
   const [isDeletingEntry, setIsDeletingEntry] = useState(false);
 
+  // --- Text-to-speech: read the in-progress draft back out loud, for the
+  // "new entry" panel and the "edit entry" panel inside the View modal. Both
+  // share a single TTS instance (only one draft is ever being written at a
+  // time), with `ttsTarget` tracking which one ('new' | 'edit') is reading.
+  const {
+    isSpeaking,
+    isSupported: isTtsSupported,
+    error: ttsError,
+    speak,
+    stop: stopSpeaking,
+  } = useTextToSpeech({ lang: 'en-US' });
+  const [ttsTarget, setTtsTarget] = useState(null);
+
+  // Toggles read-aloud for a given panel ('new' | 'edit'). Tapping the
+  // button on whichever panel is already reading stops it; tapping it on
+  // the other panel hands the voice over to that one instead.
+  const handleToggleReadAloud = (target, text) => {
+    if (isSpeaking && ttsTarget === target) {
+      stopSpeaking();
+      setTtsTarget(null);
+      return;
+    }
+    setTtsTarget(target);
+    speak(text);
+  };
+
+  // If the person keeps typing while their own draft is being read back,
+  // stop — otherwise the voice reads a version of the text that's already
+  // out of date the moment they touch the keyboard.
+  const stopReadAloudIfActive = (target) => {
+    if (isSpeaking && ttsTarget === target) {
+      stopSpeaking();
+      setTtsTarget(null);
+    }
+  };
+
   useEffect(() => {
     if (!toastMessage) return;
 
@@ -151,7 +202,10 @@ export default function DiaryForm({ shiftState = {}, setShiftState, logs = [], i
     setIsToastFading(false);
   };
 
-  const handleNewDraftChange = (e) => setNewDraft(clampToWordLimit(e.target.value));
+  const handleNewDraftChange = (e) => {
+    setNewDraft(clampToWordLimit(e.target.value));
+    stopReadAloudIfActive('new');
+  };
 
   const handleCreateNew = async () => {
     const trimmedText = newDraft.trim();
@@ -167,6 +221,7 @@ export default function DiaryForm({ shiftState = {}, setShiftState, logs = [], i
     }));
     setNewDraft('');
     setIsAddingNew(false);
+    stopReadAloudIfActive('new');
 
     setIsSavingEntry(true);
     try {
@@ -183,6 +238,7 @@ export default function DiaryForm({ shiftState = {}, setShiftState, logs = [], i
   const handleCancelNew = () => {
     setNewDraft('');
     setIsAddingNew(false);
+    stopReadAloudIfActive('new');
   };
 
   // --- View modal open/close ---
@@ -190,12 +246,14 @@ export default function DiaryForm({ shiftState = {}, setShiftState, logs = [], i
     setActiveViewEntryId(entry.id);
     setEditingEntryId(null);
     setEditDraft('');
+    stopReadAloudIfActive('edit');
   };
 
   const closeViewModal = () => {
     setActiveViewEntryId(null);
     setEditingEntryId(null);
     setEditDraft('');
+    stopReadAloudIfActive('edit');
   };
 
   // --- Editing, entered only from inside the View modal ---
@@ -204,7 +262,10 @@ export default function DiaryForm({ shiftState = {}, setShiftState, logs = [], i
     setEditingEntryId(entry.id);
   };
 
-  const handleEditDraftChange = (e) => setEditDraft(clampToWordLimit(e.target.value));
+  const handleEditDraftChange = (e) => {
+    setEditDraft(clampToWordLimit(e.target.value));
+    stopReadAloudIfActive('edit');
+  };
 
   // Always updates the existing entry in place — never creates a new card for the same date.
   // Saving closes the modal and confirms with a toast.
@@ -226,6 +287,7 @@ export default function DiaryForm({ shiftState = {}, setShiftState, logs = [], i
     setEditingEntryId(null);
     setEditDraft('');
     setActiveViewEntryId(null);
+    stopReadAloudIfActive('edit');
 
     setIsSavingEntry(true);
     try {
@@ -243,6 +305,7 @@ export default function DiaryForm({ shiftState = {}, setShiftState, logs = [], i
   const handleCancelEdit = () => {
     setEditingEntryId(null);
     setEditDraft('');
+    stopReadAloudIfActive('edit');
   };
 
   // Opens the confirmation modal rather than deleting immediately
@@ -332,13 +395,33 @@ export default function DiaryForm({ shiftState = {}, setShiftState, logs = [], i
 
       {isAddingNew && (
         <div className="diary-entry-panel">
-          <textarea
-            autoFocus
-            value={newDraft}
-            onChange={handleNewDraftChange}
-            placeholder="Describe your output clearly to authorize final afternoon clock-out submission..."
-            className="diary-textarea"
-          />
+          <div className="diary-textarea-wrap">
+            <textarea
+              autoFocus
+              value={newDraft}
+              onChange={handleNewDraftChange}
+              placeholder="Describe your output clearly to authorize final afternoon clock-out submission..."
+              className="diary-textarea"
+            />
+            {isTtsSupported && (
+              <button
+                type="button"
+                className={`diary-tts-btn${isSpeaking && ttsTarget === 'new' ? ' diary-tts-btn-active' : ''}`}
+                onClick={() => handleToggleReadAloud('new', newDraft)}
+                disabled={!newDraft.trim()}
+                aria-label={isSpeaking && ttsTarget === 'new' ? 'Stop reading draft aloud' : 'Read draft aloud'}
+                title={isSpeaking && ttsTarget === 'new' ? 'Stop reading' : 'Read draft aloud'}
+              >
+                <SpeakerIcon active={isSpeaking && ttsTarget === 'new'} />
+              </button>
+            )}
+          </div>
+          {isSpeaking && ttsTarget === 'new' && (
+            <p className="diary-tts-status">🔊 Reading your draft aloud…</p>
+          )}
+          {ttsTarget === 'new' && ttsError && (
+            <p className="diary-tts-error" role="alert">⚠️ {ttsError}</p>
+          )}
           <div className="diary-panel-footer">
             <span className={`diary-word-count ${newOverLimit ? 'diary-word-count-limit' : ''}`}>
               {newWordCount} / {WORD_LIMIT} words
@@ -451,12 +534,32 @@ export default function DiaryForm({ shiftState = {}, setShiftState, logs = [], i
             {isEditingInModal ? (
               <>
                 <div className="modal-card-body modal-form-scrollable">
-                  <textarea
-                    autoFocus
-                    value={editDraft}
-                    onChange={handleEditDraftChange}
-                    className="diary-textarea"
-                  />
+                  <div className="diary-textarea-wrap">
+                    <textarea
+                      autoFocus
+                      value={editDraft}
+                      onChange={handleEditDraftChange}
+                      className="diary-textarea"
+                    />
+                    {isTtsSupported && (
+                      <button
+                        type="button"
+                        className={`diary-tts-btn${isSpeaking && ttsTarget === 'edit' ? ' diary-tts-btn-active' : ''}`}
+                        onClick={() => handleToggleReadAloud('edit', editDraft)}
+                        disabled={!editDraft.trim()}
+                        aria-label={isSpeaking && ttsTarget === 'edit' ? 'Stop reading draft aloud' : 'Read draft aloud'}
+                        title={isSpeaking && ttsTarget === 'edit' ? 'Stop reading' : 'Read draft aloud'}
+                      >
+                        <SpeakerIcon active={isSpeaking && ttsTarget === 'edit'} />
+                      </button>
+                    )}
+                  </div>
+                  {isSpeaking && ttsTarget === 'edit' && (
+                    <p className="diary-tts-status">🔊 Reading your draft aloud…</p>
+                  )}
+                  {ttsTarget === 'edit' && ttsError && (
+                    <p className="diary-tts-error" role="alert">⚠️ {ttsError}</p>
+                  )}
                   <div className="diary-panel-footer">
                     <span className={`diary-word-count ${editOverLimit ? 'diary-word-count-limit' : ''}`}>
                       {editWordCount} / {WORD_LIMIT} words
